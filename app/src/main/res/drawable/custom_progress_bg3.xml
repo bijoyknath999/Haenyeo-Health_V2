@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/progressbar_background3">
+        <shape android:shape="rectangle">
+            <corners android:radius="3dp"/>
+            <solid android:color="#CD5C5C	"/>
+        </shape>
+
+    </item>
+
+    <item android:id="@+id/progressbar_pogress2">
+        <scale android:scaleWidth="220%">
+            <shape android:shape="rectangle">
+                <corners android:radius="3dp"/>
+                <solid android:color="#DC143C"/>
+            </shape>
+        </scale>
+    </item>
+</layer-list>
