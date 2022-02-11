@@ -18,5 +18,7 @@
     <color name="white">#FFFFFFFF</color>
     <color name="olive">#808000</color>
     <color name="otp">#009999</color>
+    <color name="color6">#FF512F</color>
+
 
 </resources>

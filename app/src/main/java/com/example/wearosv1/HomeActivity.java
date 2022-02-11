@@ -109,7 +109,12 @@ public class HomeActivity extends AppCompatActivity implements
                 DataItem item = event.getDataItem();
                 DataMapItem dataMapItem = DataMapItem.fromDataItem(item);
 
-                if(item.getUri().getPath().equals("/wearosheart")){
+                Log.d("item",""+dataMapItem.getDataMap());
+
+                if(item.getUri().getPath().equals("/Haenyeo_Health")){
+                    double lat = dataMapItem.getDataMap().getDouble("lat");
+                    double lon = dataMapItem.getDataMap().getDouble("lon");
+                    Log.d("Tag","->lat :"+lat+", lon :"+lon);
                     HeartData = dataMapItem.getDataMap().getString("HeartRate");
                     Log.d("Tag",""+HeartData);
                     int heartrate = Integer.parseInt(HeartData);

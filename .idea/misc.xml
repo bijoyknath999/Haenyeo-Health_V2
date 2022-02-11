@@ -4,17 +4,21 @@
     <option name="filePathToZoomLevelMap">
       <map>
         <entry key="app/src/main/res/drawable/custom_btn.xml" value="0.61875" />
+        <entry key="app/src/main/res/drawable/custom_layout.xml" value="0.7422907488986784" />
         <entry key="app/src/main/res/layout/activity_about_heart_rate.xml" value="0.8409090909090909" />
-        <entry key="app/src/main/res/layout/activity_home.xml" value="0.283001808318264" />
+        <entry key="app/src/main/res/layout/activity_home.xml" value="0.33" />
         <entry key="app/src/main/res/layout/activity_main.xml" value="0.15172239108409322" />
+        <entry key="app/src/main/res/layout/activity_splash.xml" value="0.2" />
         <entry key="app/src/main/res/menu/bottom_nav_menu.xml" value="0.2824074074074074" />
         <entry key="wearos/src/main/res/drawable/custom_btn.xml" value="0.61875" />
         <entry key="wearos/src/main/res/drawable/custom_button.xml" value="0.1609375" />
         <entry key="wearos/src/main/res/drawable/custom_card.xml" value="0.7222222222222222" />
         <entry key="wearos/src/main/res/drawable/custom_card2.xml" value="0.8361111111111111" />
         <entry key="wearos/src/main/res/drawable/custom_card3.xml" value="0.8361111111111111" />
-        <entry key="wearos/src/main/res/layout/activity_home.xml" value="0.25" />
+        <entry key="wearos/src/main/res/drawable/custom_layout.xml" value="0.7422907488986784" />
+        <entry key="wearos/src/main/res/layout/activity_home.xml" value="0.67" />
         <entry key="wearos/src/main/res/layout/activity_main.xml" value="0.67" />
+        <entry key="wearos/src/main/res/layout/activity_splash.xml" value="0.75" />
       </map>
     </option>
   </component>

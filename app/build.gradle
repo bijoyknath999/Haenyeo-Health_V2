@@ -38,4 +38,5 @@ dependencies {
     // Play Services
     implementation 'com.google.android.gms:play-services-location:10.2.0'
     implementation 'com.google.android.gms:play-services-wearable:10.2.0'
+    implementation "androidx.wear:wear-input:1.0.0"
 }

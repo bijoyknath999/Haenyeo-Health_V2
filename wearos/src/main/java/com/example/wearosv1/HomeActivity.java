@@ -14,11 +14,17 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.wearable.input.WearableButtons;
+import android.text.Editable;
+import android.text.method.KeyListener;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -54,6 +60,8 @@ public class HomeActivity extends Activity implements
     private ObjectAnimator animator;
     private SensorManager sensorService;
     private Sensor heartSensor;
+    private LinearLayout HeartRateClick;
+    public static int i = 0;
 
 
     @Override
@@ -79,12 +87,29 @@ public class HomeActivity extends Activity implements
 
         TextHearRate = findViewById(R.id.text_heart_rate);
         ImgHeart = findViewById(R.id.image_heart);
+        HeartRateClick = findViewById(R.id.home_heart_click);
 
 
         if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_NOTIFICATION_POLICY)
                 != PackageManager.PERMISSION_GRANTED) {
 
             String[] permissions = new String[]{Manifest.permission.ACCESS_NOTIFICATION_POLICY};
+            requestPermissions(permissions, 1);
+
+        }
+
+        if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            String[] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
+            requestPermissions(permissions, 1);
+
+        }
+
+        if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            String[] permissions = new String[]{Manifest.permission.ACCESS_COARSE_LOCATION};
             requestPermissions(permissions, 1);
 
         }
@@ -104,13 +129,45 @@ public class HomeActivity extends Activity implements
             audioManager.setStreamVolume(AudioManager.STREAM_SYSTEM, 100, 0);
         }
 
+        RequestChecker requestChecker = new RequestChecker();
+        HeartRateClick.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (requestChecker.CheckingPermissionIsEnabledOrNot(HomeActivity.this))
+                    getHeartRate();
+                else
+                    requestChecker.RequestMultiplePermission();
+            }
+        });
+
+    }
+
+
+    void SendSosData()
+    {
+        GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
+        double lat = gpsTracker.getLatitude();
+        double lon = gpsTracker.getLongitude();
+        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/Haenyeo_Health");
+        putDataMapReq.getDataMap().putDouble("lat", lat);
+        putDataMapReq.getDataMap().putDouble("lon", lon);
+        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
+        putDataReq.setUrgent();
+        PendingResult<DataApi.DataItemResult> pendingResult =
+                Wearable.DataApi
+                        .putDataItem(googleClient, putDataReq);
     }
 
     void sendData(String heartrate) {
 
 
-        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/wearosheart");
+        GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
+        double lat = gpsTracker.getLatitude();
+        double lon = gpsTracker.getLongitude();
+        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/Haenyeo_Health");
         putDataMapReq.getDataMap().putString("HeartRate", heartrate);
+        putDataMapReq.getDataMap().putDouble("lat", lat);
+        putDataMapReq.getDataMap().putDouble("lon", lon);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         putDataReq.setUrgent();
         PendingResult<DataApi.DataItemResult> pendingResult =
@@ -130,7 +187,7 @@ public class HomeActivity extends Activity implements
     }
 
     void getHeartRate() {
-        Toast.makeText(getApplicationContext(), "Loading......", Toast.LENGTH_LONG).show();
+        Toast.makeText(getApplicationContext(), "Checking......", Toast.LENGTH_LONG).show();
         sensorService = (SensorManager) getSystemService(SENSOR_SERVICE);
         heartSensor = sensorService.getDefaultSensor(Sensor.TYPE_HEART_RATE);
         sensorService.registerListener(this, heartSensor, SensorManager.SENSOR_DELAY_NORMAL);
@@ -153,9 +210,8 @@ public class HomeActivity extends Activity implements
                 animator.start();
             }
             //Toast.makeText(getApplicationContext(), Float.toString(heart_rate), Toast.LENGTH_LONG).show();
-            TextHearRate.setText(Integer.toString(heart_rate) + " bpm");
+            TextHearRate.setText(Integer.toString(heart_rate) +"");
             sendData(Integer.toString(heart_rate));
-
         } else {
             // Do nothing
         }
@@ -175,7 +231,6 @@ public class HomeActivity extends Activity implements
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();
-        stopService(new Intent(HomeActivity.this,BgService.class));
         googleClient.connect();
     }
 
@@ -187,7 +242,15 @@ public class HomeActivity extends Activity implements
     //pause listener, disconnect play services
     public void onPause(){
         super.onPause();
-        startService(new Intent(HomeActivity.this,BgService.class));
+        Intent intent = new Intent( this, BgService.class);
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            startForegroundService(intent);
+        }
+        else
+        {
+            startService(intent);
+        }
         Wearable.DataApi.removeListener(googleClient, this);
         googleClient.disconnect();
     }
@@ -215,4 +278,15 @@ public class HomeActivity extends Activity implements
         }
     }
 
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (event.getKeyCode() == KeyEvent.KEYCODE_POWER) {
+            i++;
+            if(i==2){
+                SendSosData();
+                i=0;
+            }
+
+        }
+        return super.onKeyDown(keyCode, event);
+    }
 }
