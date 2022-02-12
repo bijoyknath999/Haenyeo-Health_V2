@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.wearosv1">
+    package="com.HHMS">
     <!-- Always include this permission -->
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" /> <!-- Include only if your app benefits from precise location access. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
@@ -22,7 +22,7 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
         <activity
-            android:name=".SplashActivity"
+            android:name="com.HHMS.SplashActivity"
             android:exported="true"
             android:theme="@style/Theme.HHMS">
             <intent-filter>
@@ -33,12 +33,12 @@
         </activity>
 
         <service
-            android:name=".BgService"
+            android:name="com.HHMS.BgService"
             android:enabled="true"
             android:exported="true"></service>
 
         <receiver
-            android:name=".BootDeviceReceiver"
+            android:name="com.HHMS.BootDeviceReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -46,7 +46,7 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".MainActivity" />
+        <activity android:name="com.HHMS.MainActivity" />
 
         <uses-library
             android:name="com.google.android.wearable"
@@ -63,7 +63,7 @@
             android:resource="@array/preloaded_fonts" />
 
         <activity
-            android:name=".HomeActivity"
+            android:name="com.HHMS.HomeActivity"
             android:exported="true"
             android:label="@string/app_name">
         </activity>

@@ -19,18 +19,33 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
-                <TextView
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:id="@+id/home_heart_wishes"
-                    android:layout_marginTop="30dp"
-                    android:layout_marginStart="10dp"
-                    android:layout_marginEnd="5dp"
-                    android:layout_marginBottom="1dp"
-                    android:fontFamily="@font/nunito_bold"
-                    android:text="Good Morning !"
-                    android:textColor="@color/black"
-                    android:textSize="40sp"/>
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="30dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:id="@+id/home_heart_wishes"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginEnd="5dp"
+                        android:layout_marginBottom="1dp"
+                        android:fontFamily="@font/nunito_bold"
+                        android:text="Good Morning !"
+                        android:textColor="@color/black"
+                        android:textSize="40sp"/>
+
+                    <ImageView
+                        android:layout_width="30dp"
+                        android:layout_height="30dp"
+                        android:id="@+id/home_device_status"
+                        android:src="@drawable/ic_offline"/>
+
+                </LinearLayout>
+
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
