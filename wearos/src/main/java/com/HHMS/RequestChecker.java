@@ -28,14 +28,15 @@ public class RequestChecker extends Activity {
     }
 
     public void RequestMultiplePermission() {
-        ActivityCompat.requestPermissions((Activity) context, new String[]{ACCESS_FINE_LOCATION, BODY_SENSORS, ACCESS_NOTIFICATION_POLICY}, RequestPermissionCode);
+        ActivityCompat.requestPermissions((Activity) context, new String[]{ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, BODY_SENSORS, ACCESS_NOTIFICATION_POLICY}, RequestPermissionCode);
     }
 
     public boolean CheckingPermissionIsEnabledOrNot() {
 
         return (ContextCompat.checkSelfPermission(context, BODY_SENSORS) == PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(context, ACCESS_NOTIFICATION_POLICY) == PackageManager.PERMISSION_GRANTED
-                && ContextCompat.checkSelfPermission(context, ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED);
+                && ContextCompat.checkSelfPermission(context, ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(context, ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED);
 
     }
 

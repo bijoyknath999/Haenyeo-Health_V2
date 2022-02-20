@@ -2,9 +2,9 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
     <item android:title="Home"
-        android:icon="@drawable/ic_home"/>
-    <item android:title="Devices"
-        android:icon="@drawable/ic_devices"/>
+        android:icon="@drawable/ic_home"
+        android:id="@+id/navigation_home"/>
     <item android:title="Settings"
-        android:icon="@drawable/ic_settings"/>
+        android:icon="@drawable/ic_settings"
+        android:id="@+id/navigation_settings"/>
 </menu>

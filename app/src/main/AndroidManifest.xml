@@ -7,9 +7,12 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.CALL_PHONE"/>
 
     <application
         android:allowBackup="true"
@@ -18,13 +21,18 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.HHMS">
+        <activity
+            android:name=".SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.HHMS2"/>
+
         <service
-            android:name="com.HHMS.BgService"
+            android:name=".BgService"
             android:enabled="true"
-            android:exported="true"></service>
+            android:exported="true" />
 
         <receiver
-            android:name="com.HHMS.BootDeviceReceiver"
+            android:name=".BootDeviceReceiver"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
@@ -32,16 +40,18 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name="com.HHMS.SignUp" />
-        <activity android:name="com.HHMS.MainActivity" />
-        <activity android:name="com.HHMS.AboutHeartRate" />
-        <activity android:name="com.HHMS.Devices" />
-        <activity android:name="com.HHMS.OtpVerification" />
-        <activity android:name="com.HHMS.SignIn" />
-        <activity android:name="com.HHMS.HomeActivity" />
+        <activity android:name=".SignUp" />
+        <activity android:name=".MainActivity" />
+        <activity android:name=".AboutHeartRate" />
+        <activity android:name=".Devices" />
+        <activity android:name=".OtpVerification" />
+        <activity android:name=".SignIn" />
+        <activity android:name=".HomeActivity"
+            android:theme="@style/Theme.HHMS4"/>
         <activity
-            android:name="com.HHMS.SplashActivity"
-            android:exported="true">
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.HHMS3">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
