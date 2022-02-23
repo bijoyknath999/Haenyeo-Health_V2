@@ -55,6 +55,7 @@ public class HomeActivity extends Activity implements
     private Sensor heartSensor;
     private LinearLayout HeartRateClick;
     public static int i = 0;
+    private LinearLayout SOS;
 
 
     @Override
@@ -81,6 +82,7 @@ public class HomeActivity extends Activity implements
         TextHearRate = findViewById(R.id.text_heart_rate);
         ImgHeart = findViewById(R.id.image_heart);
         HeartRateClick = findViewById(R.id.home_heart_click);
+        SOS = findViewById(R.id.home_sos);
 
         RequestChecker requestChecker = new RequestChecker(HomeActivity.this);
         if (requestChecker.CheckingPermissionIsEnabledOrNot())
@@ -98,10 +100,19 @@ public class HomeActivity extends Activity implements
             }
         });
 
+
+        SOS.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                SendSosData(true);
+            }
+        });
+
+
     }
 
 
-    void SendSosData()
+    void SendSosData(boolean sos)
     {
         GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
         double lat = gpsTracker.getLatitude();
@@ -109,6 +120,8 @@ public class HomeActivity extends Activity implements
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/Haenyeo_Health");
         putDataMapReq.getDataMap().putDouble("lat", lat);
         putDataMapReq.getDataMap().putDouble("lon", lon);
+        putDataMapReq.getDataMap().putBoolean("sos", sos);
+        putDataMapReq.getDataMap().putString("HeartRate", "0");
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         putDataReq.setUrgent();
         PendingResult<DataApi.DataItemResult> pendingResult =
@@ -126,6 +139,7 @@ public class HomeActivity extends Activity implements
         putDataMapReq.getDataMap().putString("HeartRate", heartrate);
         putDataMapReq.getDataMap().putDouble("lat", lat);
         putDataMapReq.getDataMap().putDouble("lon", lon);
+        putDataMapReq.getDataMap().putBoolean("sos", false);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         putDataReq.setUrgent();
         PendingResult<DataApi.DataItemResult> pendingResult =

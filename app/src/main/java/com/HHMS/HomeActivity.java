@@ -1,13 +1,20 @@
 package com.HHMS;
 
+import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.CALL_PHONE;
+import static android.Manifest.permission.SEND_SMS;
+
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -105,6 +112,7 @@ public class HomeActivity extends AppCompatActivity implements
             tvwishes.setText("Good Night !");
         }
 
+
         navigationView = findViewById(R.id.navigation);
         navigationView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener(){
             @Override
@@ -136,22 +144,67 @@ public class HomeActivity extends AppCompatActivity implements
         if (!requestChecker.CheckingPermissionIsEnabledOrNot())
             requestChecker.RequestMultiplePermission();
 
+        if (!requestChecker.CheckingPermissionIsEnabledOrNot())
+            requestChecker.RequestMultiplePermission();
+        googleClient.connect();
+        IsConnected();
+
     }
 
     private void sosrun() {
         String number = sharedPreferences.getString("number","");
-        GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
-        SmsManager smsManager = SmsManager.getDefault();
-        smsManager.sendTextMessage(number,null,"Emergency SOS" +
-                "https://maps.google.com/?q="+gpsTracker.getLatitude()+","+gpsTracker.getLongitude(),null,null);
-        Snackbar snackbar = Snackbar
-                .make(MainLayout, "Message Sent Successfully!!!", Snackbar.LENGTH_LONG);
-        snackbar.show();
+        if (!number.isEmpty())
+        {
+            if(ContextCompat.checkSelfPermission(HomeActivity.this, ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(HomeActivity.this, ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(HomeActivity.this, SEND_SMS) == PackageManager.PERMISSION_GRANTED)
+            {
+                GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
+                SmsManager smsManager = SmsManager.getDefault();
+                smsManager.sendTextMessage(number,null,"Emergency SOS" +
+                        "https://maps.google.com/?q="+gpsTracker.getLatitude()+","+gpsTracker.getLongitude(),null,null);
+                Snackbar snackbar = Snackbar
+                        .make(MainLayout, "Message Sent Successfully!!!", Snackbar.LENGTH_LONG);
+                snackbar.show();
+            }
 
-        Intent callIntent = new Intent(Intent.ACTION_CALL);
-        callIntent.setData(Uri.parse("tel:"+number));
-        startActivity(callIntent);
+            if(ContextCompat.checkSelfPermission(HomeActivity.this, CALL_PHONE) == PackageManager.PERMISSION_GRANTED)
+            {
+                Intent callIntent = new Intent(Intent.ACTION_CALL);
+                callIntent.setData(Uri.parse("tel:"+number));
+                startActivity(callIntent);
+            }
+        }
+
     }
+
+    private void sosrunWear(double lat, double lon) {
+        String number = sharedPreferences.getString("number","");
+        if (!number.isEmpty())
+        {
+            if(ContextCompat.checkSelfPermission(HomeActivity.this, ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(HomeActivity.this, ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    && ContextCompat.checkSelfPermission(HomeActivity.this, SEND_SMS) == PackageManager.PERMISSION_GRANTED)
+            {
+                GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
+                SmsManager smsManager = SmsManager.getDefault();
+                smsManager.sendTextMessage(number,null,"Emergency SOS\n" +
+                        "https://maps.google.com/?q="+lat+","+lon,null,null);
+                Snackbar snackbar = Snackbar
+                        .make(MainLayout, "Message Sent Successfully!!!", Snackbar.LENGTH_LONG);
+                snackbar.show();
+            }
+
+            if(ContextCompat.checkSelfPermission(HomeActivity.this, CALL_PHONE) == PackageManager.PERMISSION_GRANTED)
+            {
+                Intent callIntent = new Intent(Intent.ACTION_CALL);
+                callIntent.setData(Uri.parse("tel:"+number));
+                startActivity(callIntent);
+            }
+        }
+
+    }
+
 
     public boolean foregroundServiceRunning(){
         ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -294,6 +347,7 @@ public class HomeActivity extends AppCompatActivity implements
                 if(item.getUri().getPath().equals("/Haenyeo_Health")){
                     double lat = dataMapItem.getDataMap().getDouble("lat");
                     double lon = dataMapItem.getDataMap().getDouble("lon");
+                    boolean sos = dataMapItem.getDataMap().getBoolean("sos");
                     Log.d("Tag","->lat :"+lat+", lon :"+lon);
                     HeartData = dataMapItem.getDataMap().getString("HeartRate");
                     Log.d("Tag",""+HeartData);
@@ -306,6 +360,12 @@ public class HomeActivity extends AppCompatActivity implements
                         progressBar.setMax(220);
                         progressBar.setMin(40);
                         progressBar.setProgress(Integer.parseInt(HeartData));
+                    }
+
+                    if (sos)
+                    {
+                        Log.d("Tag","SOS");
+                        sosrunWear(lat,lon);
                     }
                 }
                 else

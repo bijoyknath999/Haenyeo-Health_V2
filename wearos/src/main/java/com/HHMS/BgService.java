@@ -65,8 +65,8 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
 
             createNotificationChannel();
             Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                    .setContentTitle("")
-                    .setContentText("")
+                    .setContentTitle("해녀건강")
+                    .setContentText("Health Service is running")
                     .setSmallIcon(R.drawable.ic_notifications)
                     .build();
             startForeground(1, notification);
@@ -94,7 +94,7 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Foreground Service Channel",
+                    "해녀건강 Service Channel",
                     NotificationManager.IMPORTANCE_DEFAULT
             );
             NotificationManager manager = getSystemService(NotificationManager.class);

@@ -1,14 +1,24 @@
 package com.HHMS;
 
+import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
+import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import static android.Manifest.permission.CALL_PHONE;
+import static android.Manifest.permission.SEND_SMS;
+
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.telephony.SmsManager;
 import android.text.Editable;
 import android.text.method.KeyListener;
 import android.util.Log;
@@ -17,6 +27,7 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.IconCompat;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -27,6 +38,7 @@ import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
+import com.google.android.material.snackbar.Snackbar;
 
 public class BgService extends Service implements DataApi.DataListener, GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener, KeyListener {
@@ -34,12 +46,15 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
 
     public static GoogleApiClient googleClient;
     public static final String CHANNEL_ID = "ForegroundServiceChannel";
+    private SharedPreferences sharedPreferences;
+
 
 
 
     // execution of service will start
     // on calling this method
     public int onStartCommand(Intent intent, int flags, int startId) {
+
 
         if (intent.getAction().equals("start")) {
             googleClient = new GoogleApiClient.Builder(getApplicationContext())
@@ -50,8 +65,8 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
 
             createNotificationChannel();
             Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                    .setContentTitle("")
-                    .setContentText("")
+                    .setContentTitle("해녀건강")
+                    .setContentText("Health Service is running")
                     .setSmallIcon(R.drawable.ic_notifications)
                     .build();
             startForeground(1, notification);
@@ -73,7 +88,7 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
-                    "Foreground Service Channel",
+                    "해녀건강 Service Channel",
                     NotificationManager.IMPORTANCE_DEFAULT
             );
             NotificationManager manager = getSystemService(NotificationManager.class);
@@ -143,12 +158,18 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
                 if(item.getUri().getPath().equals("/Haenyeo_Health")){
                     double lat = dataMapItem.getDataMap().getDouble("lat");
                     double lon = dataMapItem.getDataMap().getDouble("lon");
+                    boolean sos = dataMapItem.getDataMap().getBoolean("sos");
                     Log.d("Tag","->lat :"+lat+", lon :"+lon);
                     String HeartData = dataMapItem.getDataMap().getString("HeartRate");
                     int heartrate = Integer.parseInt(HeartData);
                     if (heartrate>=40 && heartrate <= 220)
                     {
 
+                    }
+                    if (sos)
+                    {
+                        Log.d("Tag","SOSing");
+                        sosrunWear(lat,lon);
                     }
                 }
                 else
@@ -158,6 +179,20 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
             }
         }
     }
+
+    private void sosrunWear(double lat, double lon) {
+        sharedPreferences = getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
+        String number = sharedPreferences.getString("number","");
+        if (!number.isEmpty()) {
+            SmsManager smsManager = SmsManager.getDefault();
+            smsManager.sendTextMessage(number, null, "Emergency SOS\nYou're receiving this message this contact has listed you as an emergency contact.\n" +
+                    "https://maps.google.com/?q=" + lat + "," + lon, null, null);
+            Intent callIntent = new Intent(Intent.ACTION_CALL);
+            callIntent.setData(Uri.parse("tel:" + number));
+            callIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(callIntent);
+        }
+        }
 
     @Override
     public int getInputType() {

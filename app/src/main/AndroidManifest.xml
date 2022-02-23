@@ -40,12 +40,7 @@
             </intent-filter>
         </receiver>
 
-        <activity android:name=".SignUp" />
-        <activity android:name=".MainActivity" />
-        <activity android:name=".AboutHeartRate" />
-        <activity android:name=".Devices" />
-        <activity android:name=".OtpVerification" />
-        <activity android:name=".SignIn" />
+
         <activity android:name=".HomeActivity"
             android:theme="@style/Theme.HHMS4"/>
         <activity
