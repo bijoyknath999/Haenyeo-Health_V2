@@ -15,6 +15,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -46,10 +48,12 @@ import com.google.android.gms.wearable.Wearable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.snackbar.Snackbar;
 
+import java.io.IOException;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public class HomeActivity extends AppCompatActivity implements
@@ -67,6 +71,7 @@ public class HomeActivity extends AppCompatActivity implements
     private RelativeLayout MainLayout;
     private SharedPreferences sharedPreferences;
     private SharedPreferences.Editor editor;
+    private RequestChecker requestChecker;
 
 
 
@@ -114,14 +119,19 @@ public class HomeActivity extends AppCompatActivity implements
 
 
         navigationView = findViewById(R.id.navigation);
-        navigationView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener(){
+
+        navigationView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-
-
                 switch (item.getItemId()){
                     case R.id.navigation_home:
                         Toast.makeText(HomeActivity.this, "Home", Toast.LENGTH_SHORT).show();
+                        return true;
+                    case R.id.navigation_location:
+                        GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
+                        String uri ="https://maps.google.com/?q="+gpsTracker.getLatitude()+","+gpsTracker.getLongitude();
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+                        startActivity(intent);
                         return true;
                     case R.id.navigation_settings:
                         startActivity(new Intent(HomeActivity.this,SettingsActivity.class));
@@ -140,12 +150,10 @@ public class HomeActivity extends AppCompatActivity implements
             }
         });
 
-        RequestChecker requestChecker = new RequestChecker(HomeActivity.this);
+        requestChecker = new RequestChecker(HomeActivity.this);
         if (!requestChecker.CheckingPermissionIsEnabledOrNot())
             requestChecker.RequestMultiplePermission();
 
-        if (!requestChecker.CheckingPermissionIsEnabledOrNot())
-            requestChecker.RequestMultiplePermission();
         googleClient.connect();
         IsConnected();
 
@@ -277,9 +285,7 @@ public class HomeActivity extends AppCompatActivity implements
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();
-        RequestChecker requestChecker = new RequestChecker(HomeActivity.this);
-        if (!requestChecker.CheckingPermissionIsEnabledOrNot())
-            requestChecker.RequestMultiplePermission();
+
         googleClient.connect();
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("stop");

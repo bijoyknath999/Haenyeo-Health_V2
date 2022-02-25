@@ -192,7 +192,7 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
             callIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(callIntent);
         }
-        }
+    }
 
     @Override
     public int getInputType() {

@@ -7,10 +7,10 @@
     android:background="@color/color3"
     tools:context=".HomeActivity"
     android:id="@+id/home_layout">
-    <LinearLayout
+
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical">
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -39,7 +39,7 @@
                         android:fontFamily="@font/nunito_bold"
                         android:text="Good Morning !"
                         android:textColor="@color/black"
-                        android:textSize="40sp"/>
+                        android:textSize="35sp"/>
 
                     <ImageView
                         android:layout_width="30dp"
@@ -162,200 +162,19 @@
 
             </LinearLayout>
 
-            <!--<LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="10dp"
-                android:background="@drawable/custom_btn"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Blood Pressure"
-                    android:gravity="center"
-                    android:layout_marginStart="10dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="10dp"
-                    android:textSize="14sp"
-                    android:fontFamily="@font/roboto_medium"/>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:gravity="center"
-                    android:layout_marginTop="20dp"
-                    android:layout_marginEnd="10dp"
-                    android:fontFamily="@font/roboto"
-                    android:text="No records today"
-                    android:textColor="@color/black"
-                    android:textSize="11sp"/>
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <ProgressBar
-                        android:layout_width="100dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="30dp"
-                        android:layout_marginStart="10dp"
-                        android:paddingEnd="5dp"
-                        android:paddingBottom="10dp"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:progressDrawable="@drawable/custom_progress_bg2"/>
-                    <ProgressBar
-                        android:layout_width="100dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="30dp"
-                        android:layout_marginStart="10dp"
-                        android:paddingEnd="5dp"
-                        android:paddingBottom="10dp"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:progressDrawable="@drawable/custom_progress_bg2"/>
-                    <ProgressBar
-                        android:layout_width="100dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="30dp"
-                        android:layout_marginStart="10dp"
-                        android:paddingEnd="5dp"
-                        android:paddingBottom="10dp"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:progressDrawable="@drawable/custom_progress_bg2"/>
-                </LinearLayout>
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:layout_marginTop="1dp">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Low"
-                        android:textSize="11sp"
-                        android:textColor="@color/grey"
-                        android:layout_marginStart="40dp"
-                        android:layout_marginEnd="20dp"
-                        android:fontFamily="@font/roboto"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Normal"
-                        android:textSize="11sp"
-                        android:textColor="@color/grey"
-                        android:layout_marginStart="65dp"
-                        android:layout_marginEnd="30dp"
-                        android:fontFamily="@font/roboto"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="High"
-                        android:textSize="11sp"
-                        android:textColor="@color/grey"
-                        android:layout_marginStart="50dp"
-                        android:layout_marginBottom="8dp"
-                        android:fontFamily="@font/roboto"/>
-
-                </LinearLayout>
-
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="10dp"
-                android:background="@drawable/custom_btn"
-                android:orientation="vertical">
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="SPO2"
-                    android:gravity="center"
-                    android:layout_marginStart="10dp"
-                    android:layout_marginTop="10dp"
-                    android:layout_marginEnd="10dp"
-                    android:textSize="14sp"
-                    android:fontFamily="@font/roboto_medium"/>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
-                    android:gravity="center"
-                    android:layout_marginTop="20dp"
-                    android:layout_marginEnd="10dp"
-                    android:fontFamily="@font/roboto"
-                    android:text="No records today"
-                    android:textColor="@color/black"
-                    android:textSize="11sp" />
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <ProgressBar
-                        android:layout_width="200dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="30dp"
-                        android:layout_marginStart="20dp"
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:progressDrawable="@drawable/custom_progress_bg3"/>
-                    <ProgressBar
-                        android:layout_width="80dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="30dp"
-                        android:layout_marginStart="4dp"
-
-                        style="?android:attr/progressBarStyleHorizontal"
-                        android:progressDrawable="@drawable/custom_progress_bg4"/>
-                </LinearLayout>
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal">
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:layout_marginStart="15dp"
-                        android:text="70"
-                        android:textColor="@color/teal_700"
-                        android:textSize="10sp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"                                                       android:layout_marginTop="2dp"
-                        android:layout_marginEnd="50dp"
-                        android:layout_marginStart="180dp"
-                        android:text="90"
-                        android:textColor="@color/teal_700"
-                        android:textSize="10sp"/>
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:gravity="end"
-                        android:layout_marginTop="2dp"
-                        android:layout_marginEnd="10dp"
-                        android:layout_marginStart="30dp"
-                        android:text="100"
-                        android:textColor="@color/teal_700"
-                        android:textSize="10sp"/>
-                </LinearLayout>
-
-
-            </LinearLayout>-->
-
         </LinearLayout>
 
 
-    </LinearLayout>
-
+    </androidx.core.widget.NestedScrollView>
 
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        app:menu="@menu/bottom_nav_menu"
         android:id="@+id/navigation"
-        android:layout_alignParentBottom="true"/>
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:attr/windowBackground"
+        android:layout_alignParentBottom="true"
+        app:menu="@menu/bottom_nav_menu" />
 
 
 </RelativeLayout>

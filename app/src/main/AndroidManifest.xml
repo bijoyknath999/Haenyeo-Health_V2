@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.SEND_SMS" />
     <uses-permission android:name="android.permission.READ_SMS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
-    <uses-permission android:name="android.permission.CALL_PHONE"/>
+    <uses-permission android:name="android.permission.CALL_PHONE" />
 
     <application
         android:allowBackup="true"
@@ -21,10 +21,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.HHMS">
+
+
         <activity
             android:name=".SettingsActivity"
             android:exported="false"
-            android:theme="@style/Theme.HHMS2"/>
+            android:theme="@style/Theme.HHMS2" />
 
         <service
             android:name=".BgService"
@@ -40,9 +42,10 @@
             </intent-filter>
         </receiver>
 
-
-        <activity android:name=".HomeActivity"
-            android:theme="@style/Theme.HHMS4"/>
+        <activity
+            android:name=".HomeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.HHMS4"></activity>
         <activity
             android:name=".SplashActivity"
             android:exported="true"

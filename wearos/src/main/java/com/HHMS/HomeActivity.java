@@ -118,10 +118,10 @@ public class HomeActivity extends Activity implements
         double lat = gpsTracker.getLatitude();
         double lon = gpsTracker.getLongitude();
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/Haenyeo_Health");
+        putDataMapReq.getDataMap().putString("HeartRate", "0.0");
         putDataMapReq.getDataMap().putDouble("lat", lat);
         putDataMapReq.getDataMap().putDouble("lon", lon);
         putDataMapReq.getDataMap().putBoolean("sos", sos);
-        putDataMapReq.getDataMap().putString("HeartRate", "0");
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         putDataReq.setUrgent();
         PendingResult<DataApi.DataItemResult> pendingResult =
