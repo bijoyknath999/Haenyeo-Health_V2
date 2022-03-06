@@ -8,19 +8,21 @@ import static android.Manifest.permission.SEND_SMS;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.Address;
-import android.location.Geocoder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.telephony.SmsManager;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -31,40 +33,30 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.tasks.Tasks;
-import com.google.android.gms.wearable.CapabilityApi;
-import com.google.android.gms.wearable.CapabilityInfo;
-import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataClient;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.DataMapItem;
-import com.google.android.gms.wearable.Node;
-import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.snackbar.Snackbar;
 
-import java.io.IOException;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import org.json.JSONException;
+import org.json.JSONObject;
 
-public class HomeActivity extends AppCompatActivity implements
-        DataApi.DataListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+import java.util.Calendar;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+
+public class HomeActivity extends AppCompatActivity implements DataClient.OnDataChangedListener {
 
     String HeartData;
     private TextView tvHeartRate, tvwishes,tvnoheart;
     private ProgressBar progressBar;
-    private GoogleApiClient googleClient;
-    private static final String FIND_ME_CAPABILITY_NAME = "find_me";
-    boolean check = false;
     private ImageView StatusImage;
     private LinearLayout SOS;
     private BottomNavigationView navigationView;
@@ -72,6 +64,9 @@ public class HomeActivity extends AppCompatActivity implements
     private SharedPreferences sharedPreferences;
     private SharedPreferences.Editor editor;
     private RequestChecker requestChecker;
+    private static final int REQUEST_CODE = 101;
+    private String IMEINumber;
+
 
 
 
@@ -95,14 +90,6 @@ public class HomeActivity extends AppCompatActivity implements
         MainLayout = findViewById(R.id.home_layout);
         sharedPreferences = getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
 
-
-
-        //data layer
-        googleClient = new GoogleApiClient.Builder(this)
-                .addApi(Wearable.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
 
         Calendar c = Calendar.getInstance();
         int timeOfDay = c.get(Calendar.HOUR_OF_DAY);
@@ -128,10 +115,7 @@ public class HomeActivity extends AppCompatActivity implements
                         Toast.makeText(HomeActivity.this, "Home", Toast.LENGTH_SHORT).show();
                         return true;
                     case R.id.navigation_location:
-                        GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
-                        String uri ="https://maps.google.com/?q="+gpsTracker.getLatitude()+","+gpsTracker.getLongitude();
-                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
-                        startActivity(intent);
+                        SendLocationServer();
                         return true;
                     case R.id.navigation_settings:
                         startActivity(new Intent(HomeActivity.this,SettingsActivity.class));
@@ -147,6 +131,7 @@ public class HomeActivity extends AppCompatActivity implements
             @Override
             public void onClick(View view) {
                 sosrun();
+                SendSOSServer();
             }
         });
 
@@ -154,9 +139,114 @@ public class HomeActivity extends AppCompatActivity implements
         if (!requestChecker.CheckingPermissionIsEnabledOrNot())
             requestChecker.RequestMultiplePermission();
 
-        googleClient.connect();
-        IsConnected();
+    }
 
+    private void SendSOSServer()
+    {
+        JSONObject data = new JSONObject();
+
+        JSONObject jobj = new JSONObject();
+        try {
+            data.put("IMEI", getImei());
+            jobj.put("ID", "SO");
+            jobj.put("DATA", data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    Log.d("SOS ",""+response.body());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                Log.d("Error ",""+t.getMessage());
+            }
+        });
+    }
+
+    private void SendHeartRateServer(int heartrate)
+    {
+        JSONObject data = new JSONObject();
+
+        JSONObject HRval = new JSONObject();
+        try {
+            data.put("IMEI", getImei());
+            data.put("HR_MIN", heartrate);
+            data.put("HR_MAX", heartrate);
+
+            HRval.put("ID", "HR");
+            HRval.put("DATA", data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        ApiInterface.getRequestApiInterface().sendData(HRval.toString()).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    Log.d("HeartRate ",""+response.body());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                Log.d("Error ",""+t.getMessage());
+            }
+        });
+    }
+
+    private void SendLocationServer()
+    {
+        GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
+        JSONObject data = new JSONObject();
+
+        JSONObject LocData = new JSONObject();
+        try {
+            data.put("IMEI", getImei());
+            data.put("LAT", gpsTracker.getLatitude());
+            data.put("LNG", gpsTracker.getLongitude());
+
+            LocData.put("ID", "LP");
+            LocData.put("DATA", data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        ApiInterface.getRequestApiInterface().sendData(LocData.toString()).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    startActivity(new Intent(HomeActivity.this, MapsActivity.class));
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                Log.d("Testing3",""+t.getMessage());
+                startActivity(new Intent(HomeActivity.this, MapsActivity.class));
+            }
+        });
+    }
+
+
+    @SuppressLint("MissingPermission")
+    private String getImei()
+    {
+        if (!requestChecker.CheckingPermissionIsEnabledOrNot())
+            requestChecker.RequestMultiplePermission();
+
+        TelephonyManager telephonyManager = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
+        IMEINumber = telephonyManager.getImei();
+
+        return IMEINumber;
     }
 
     private void sosrun() {
@@ -224,69 +314,12 @@ public class HomeActivity extends AppCompatActivity implements
         return false;
     }
 
-    private void IsConnected(){
-        Wearable.NodeApi.getConnectedNodes(googleClient).setResultCallback(new ResultCallback<NodeApi.GetConnectedNodesResult>() {
-            @Override
-            public void onResult(@NonNull NodeApi.GetConnectedNodesResult getConnectedNodesResult) {
-                List<Node> connectedNodes =
-                        getConnectedNodesResult.getNodes();
-                Log.d("Tag","node"+connectedNodes.size());
-                if (connectedNodes.size()>0)
-                    StatusImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_online));
-                else
-                    StatusImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_offline));
-            }
-        });
-    }
-
-
-    //on successful connection to play services, add data listner
-    public void onConnected(Bundle connectionHint) {
-        Wearable.DataApi.addListener(googleClient, this);
-        setOrUpdateNotification();
-        Log.d("Tag",""+googleClient.isConnected());
-    }
-
-    private void setOrUpdateNotification() {
-        Wearable.CapabilityApi.getCapability(
-                googleClient, FIND_ME_CAPABILITY_NAME,
-                CapabilityApi.FILTER_REACHABLE).setResultCallback(
-                new ResultCallback<CapabilityApi.GetCapabilityResult>() {
-                    @Override
-                    public void onResult(CapabilityApi.GetCapabilityResult result) {
-                        if (result.getStatus().isSuccess()) {
-                            updateFindMeCapability(result.getCapability());
-                        } else {
-                            Log.e("Tag",
-                                    "setOrUpdateNotification() Failed to get capabilities, "
-                                            + "status: "
-                                            + result.getStatus().getStatusMessage());
-                        }
-                    }
-                });
-    }
-
-    private void updateFindMeCapability(CapabilityInfo capabilityInfo) {
-        Set<Node> connectedNodes = capabilityInfo.getNodes();
-        Log.d("Tag",""+connectedNodes);
-        if (connectedNodes.isEmpty()) {
-            Log.d("Tag","Losted");
-        } else {
-            for (Node node : connectedNodes) {
-                // we are only considering those nodes that are directly connected
-                if (node.isNearby()) {
-                    Log.d("Tag","NoLosted");
-                }
-            }
-        }
-    }
-
 
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();
+        Wearable.getDataClient(this).addListener(this);
 
-        googleClient.connect();
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("stop");
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -299,14 +332,6 @@ public class HomeActivity extends AppCompatActivity implements
             if (foregroundServiceRunning())
                 startService(startIntent);
         }
-
-        IsConnected();
-    }
-
-    //on suspended connection, remove play services
-    public void onConnectionSuspended(int cause) {
-        Wearable.DataApi.removeListener(googleClient, this);
-        Log.d("Tag","Suspend"+cause);
     }
 
 
@@ -314,8 +339,8 @@ public class HomeActivity extends AppCompatActivity implements
     //pause listener, disconnect play services
     public void onPause(){
         super.onPause();
-        Wearable.DataApi.removeListener(googleClient, this);
-        googleClient.disconnect();
+        Wearable.getDataClient(this).removeListener(this);
+
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("start");
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -328,12 +353,6 @@ public class HomeActivity extends AppCompatActivity implements
             if (!foregroundServiceRunning())
                 startService(startIntent);
         }
-    }
-
-    //On failed connection to play services, remove the data listener
-    public void onConnectionFailed(ConnectionResult result) {
-        Log.d("Tag","error :"+result.getErrorMessage());
-        Wearable.DataApi.removeListener(googleClient, this);
     }
 
     //watches for data item
@@ -357,6 +376,7 @@ public class HomeActivity extends AppCompatActivity implements
                     Log.d("Tag","->lat :"+lat+", lon :"+lon);
                     HeartData = dataMapItem.getDataMap().getString("HeartRate");
                     Log.d("Tag",""+HeartData);
+
                     int heartrate = Integer.parseInt(HeartData);
                     if (heartrate>=40 && heartrate <= 220)
                     {
@@ -366,12 +386,14 @@ public class HomeActivity extends AppCompatActivity implements
                         progressBar.setMax(220);
                         progressBar.setMin(40);
                         progressBar.setProgress(Integer.parseInt(HeartData));
+                        SendHeartRateServer(Integer.parseInt(HeartData));
                     }
 
                     if (sos)
                     {
                         Log.d("Tag","SOS");
                         sosrunWear(lat,lon);
+                        SendSOSServer();
                     }
                 }
                 else
@@ -383,7 +405,8 @@ public class HomeActivity extends AppCompatActivity implements
         }
     }
 
-
-
-    //`isOnline`,`setUpAPIInformation` methods along with the `APIAsyncTask` class to go in here
+    @Override
+    public void onPointerCaptureChanged(boolean hasCapture) {
+        super.onPointerCaptureChanged(hasCapture);
+    }
 }

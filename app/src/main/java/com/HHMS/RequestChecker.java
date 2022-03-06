@@ -5,6 +5,7 @@ import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.Manifest.permission.ACCESS_NOTIFICATION_POLICY;
 import static android.Manifest.permission.BODY_SENSORS;
 import static android.Manifest.permission.CALL_PHONE;
+import static android.Manifest.permission.READ_PHONE_STATE;
 import static android.Manifest.permission.READ_SMS;
 import static android.Manifest.permission.RECEIVE_SMS;
 import static android.Manifest.permission.SEND_SMS;
@@ -30,7 +31,7 @@ public class RequestChecker extends Activity {
 
     public void RequestMultiplePermission() {
         ActivityCompat.requestPermissions((Activity) context, new String[]{ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION,CALL_PHONE,RECEIVE_SMS
-                ,SEND_SMS,READ_SMS ,ACCESS_NOTIFICATION_POLICY}, RequestPermissionCode);
+                ,SEND_SMS,READ_SMS ,ACCESS_NOTIFICATION_POLICY,READ_PHONE_STATE}, RequestPermissionCode);
     }
 
     public boolean CheckingPermissionIsEnabledOrNot() {
@@ -41,7 +42,8 @@ public class RequestChecker extends Activity {
                 && ContextCompat.checkSelfPermission(context, CALL_PHONE) == PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(context, RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
                 && ContextCompat.checkSelfPermission(context, SEND_SMS) == PackageManager.PERMISSION_GRANTED
-                && ContextCompat.checkSelfPermission(context, READ_SMS) == PackageManager.PERMISSION_GRANTED);
+                && ContextCompat.checkSelfPermission(context, READ_SMS) == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(context, READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED);
 
     }
 

@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.HHMS">
+    package="com.HHMS" >
+
     <!-- Always include this permission -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -20,11 +21,31 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.DeviceDefault">
+        android:theme="@android:style/Theme.DeviceDefault" >
+
+        <!--
+             TODO: Before you run your application, you need a Google Maps API key.
+
+             To get one, follow the directions here:
+
+                https://developers.google.com/maps/documentation/android-sdk/get-api-key
+
+             Once you have your API key (it starts with "AIza"), define a new property in your
+             project's local.properties file (e.g. MAPS_API_KEY=Aiza...), and replace the
+             "YOUR_API_KEY" string in this file with "${MAPS_API_KEY}".
+        -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="@string/map_key" />
+
         <activity
-            android:name="com.HHMS.SplashActivity"
+            android:name=".MapsActivity"
+            android:exported="false"
+            android:label="@string/title_activity_maps" />
+        <activity
+            android:name=".SplashActivity"
             android:exported="true"
-            android:theme="@style/Theme.HHMS">
+            android:theme="@style/Theme.HHMS" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -33,20 +54,20 @@
         </activity>
 
         <service
-            android:name="com.HHMS.BgService"
+            android:name=".BgService"
             android:enabled="true"
-            android:exported="true"></service>
+            android:exported="true" />
 
         <receiver
-            android:name="com.HHMS.BootDeviceReceiver"
+            android:name=".BootDeviceReceiver"
             android:enabled="true"
-            android:exported="true">
+            android:exported="true" >
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 
-        <activity android:name="com.HHMS.MainActivity" />
+        <activity android:name=".MainActivity" />
 
         <uses-library
             android:name="com.google.android.wearable"
@@ -63,9 +84,9 @@
             android:resource="@array/preloaded_fonts" />
 
         <activity
-            android:name="com.HHMS.HomeActivity"
+            android:name=".HomeActivity"
             android:exported="true"
-            android:label="@string/app_name">
+            android:label="@string/app_name" >
         </activity>
     </application>
 

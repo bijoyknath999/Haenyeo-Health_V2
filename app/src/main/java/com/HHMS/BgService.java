@@ -5,6 +5,7 @@ import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 import static android.Manifest.permission.CALL_PHONE;
 import static android.Manifest.permission.SEND_SMS;
 
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -19,6 +20,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.telephony.SmsManager;
+import android.telephony.TelephonyManager;
 import android.text.Editable;
 import android.text.method.KeyListener;
 import android.util.Log;
@@ -33,6 +35,7 @@ import androidx.core.graphics.drawable.IconCompat;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.wearable.DataClient;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
@@ -40,13 +43,19 @@ import com.google.android.gms.wearable.DataMapItem;
 import com.google.android.gms.wearable.Wearable;
 import com.google.android.material.snackbar.Snackbar;
 
-public class BgService extends Service implements DataApi.DataListener, GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener, KeyListener {
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+public class BgService extends Service implements DataClient.OnDataChangedListener, KeyListener {
 
 
-    public static GoogleApiClient googleClient;
     public static final String CHANNEL_ID = "ForegroundServiceChannel";
     private SharedPreferences sharedPreferences;
+    private String IMEINumber;
 
 
 
@@ -55,30 +64,26 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
     // on calling this method
     public int onStartCommand(Intent intent, int flags, int startId) {
 
+        if (intent.getAction()!=null)
+        {
+            if (intent.getAction().equals("start")) {
+                Wearable.getDataClient(this).addListener(this);
 
-        if (intent.getAction().equals("start")) {
-            googleClient = new GoogleApiClient.Builder(getApplicationContext())
-                    .addApi(Wearable.API)
-                    .addConnectionCallbacks(this)
-                    .addOnConnectionFailedListener(this)
-                    .build();
+                createNotificationChannel();
+                Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                        .setContentTitle("해녀건강")
+                        .setContentText("Health Service is running")
+                        .setSmallIcon(R.drawable.ic_notifications)
+                        .build();
+                startForeground(1, notification);
+                //do heavy work on a background thread
+                //stopSelf();
+                Log.d("Bg","Bging");
 
-            createNotificationChannel();
-            Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                    .setContentTitle("해녀건강")
-                    .setContentText("Health Service is running")
-                    .setSmallIcon(R.drawable.ic_notifications)
-                    .build();
-            startForeground(1, notification);
-            //do heavy work on a background thread
-            //stopSelf();
-            Log.d("Bg","Bging");
-
-
-            googleClient.connect();
-        }
-        else if (intent.getAction().equals("stop")) {
-            stopall();
+            }
+            else if (intent.getAction().equals("stop")) {
+                stopall();
+            }
         }
 
         return START_STICKY;
@@ -106,13 +111,10 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
 
     public  void stopall()
     {
-        if (googleClient!=null)
-        {
-            Wearable.DataApi.removeListener(googleClient, this);
-            googleClient.disconnect();
-            stopForeground(true);
-            stopSelf();
-        }
+        Wearable.getDataClient(this).removeListener(this);
+
+        stopForeground(true);
+        stopSelf();
     }
 
     @Override
@@ -121,15 +123,6 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
-    //on successful connection to play services, add data listner
-    public void onConnected(Bundle connectionHint) {
-        Wearable.DataApi.addListener(googleClient, this);
-    }
-
-    //on suspended connection, remove play services
-    public void onConnectionSuspended(int cause) {
-        Wearable.DataApi.removeListener(googleClient, this);
-    }
 
    /* //pause listener, disconnect play services
     public void onPause(){
@@ -139,10 +132,6 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
         googleClient.disconnect();
     }*/
 
-    //On failed connection to play services, remove the data listener
-    public void onConnectionFailed(ConnectionResult result) {
-        Wearable.DataApi.removeListener(googleClient, this);
-    }
 
     //function triggered every time there's a data change event
     public void onDataChanged(DataEventBuffer dataEvents) {
@@ -164,12 +153,12 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
                     int heartrate = Integer.parseInt(HeartData);
                     if (heartrate>=40 && heartrate <= 220)
                     {
-
+                        SendHeartRateServer(Integer.parseInt(HeartData));
                     }
                     if (sos)
                     {
-                        Log.d("Tag","SOSing");
                         sosrunWear(lat,lon);
+                        SendSOSServer();
                     }
                 }
                 else
@@ -192,6 +181,76 @@ public class BgService extends Service implements DataApi.DataListener, GoogleAp
             callIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             startActivity(callIntent);
         }
+    }
+
+
+    private void SendHeartRateServer(int heartrate)
+    {
+        JSONObject data = new JSONObject();
+
+        JSONObject HRval = new JSONObject();
+        try {
+            data.put("IMEI", getImei());
+            data.put("HR_MIN", heartrate);
+            data.put("HR_MAX", heartrate);
+
+            HRval.put("ID", "HR");
+            HRval.put("DATA", data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        ApiInterface.getRequestApiInterface().sendData(HRval.toString()).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    Log.d("HeartRate ",""+response.body());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                Log.d("Error ",""+t.getMessage());
+            }
+        });
+    }
+
+    private void SendSOSServer()
+    {
+        JSONObject data = new JSONObject();
+
+        JSONObject jobj = new JSONObject();
+        try {
+            data.put("IMEI", getImei());
+            jobj.put("ID", "SO");
+            jobj.put("DATA", data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<String>() {
+            @Override
+            public void onResponse(Call<String> call, Response<String> response) {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    Log.d("SOS ",""+response.body());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<String> call, Throwable t) {
+                Log.d("Error ",""+t.getMessage());
+            }
+        });
+    }
+
+    @SuppressLint("MissingPermission")
+    private String getImei()
+    {
+        TelephonyManager telephonyManager = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
+        IMEINumber = telephonyManager.getImei();
+        return IMEINumber;
     }
 
     @Override

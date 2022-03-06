@@ -1,23 +1,18 @@
 package com.HHMS;
 
-import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.ActivityManager;
-import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
@@ -25,14 +20,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
-
-import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
-
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.wearable.DataApi;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.wearable.DataClient;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
@@ -41,19 +30,17 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
-public class HomeActivity extends Activity implements
-        DataApi.DataListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, SensorEventListener {
+public class HomeActivity extends Activity
+        implements SensorEventListener, DataClient.OnDataChangedListener {
 
     private Button button;
     private TextView mTextView;
-
-    private GoogleApiClient googleClient;
     TextView TextHearRate;
     ImageView ImgHeart;
     private ObjectAnimator animator;
     private SensorManager sensorService;
     private Sensor heartSensor;
-    private LinearLayout HeartRateClick;
+    private LinearLayout HeartRateClick, LocationClick;
     public static int i = 0;
     private LinearLayout SOS;
 
@@ -72,17 +59,12 @@ public class HomeActivity extends Activity implements
             }
         });*/
 
-        //set up google play services client
-        googleClient = new GoogleApiClient.Builder(this)
-                .addApi(Wearable.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
 
         TextHearRate = findViewById(R.id.text_heart_rate);
         ImgHeart = findViewById(R.id.image_heart);
         HeartRateClick = findViewById(R.id.home_heart_click);
         SOS = findViewById(R.id.home_sos);
+        LocationClick = findViewById(R.id.home_check_location);
 
         RequestChecker requestChecker = new RequestChecker(HomeActivity.this);
         if (requestChecker.CheckingPermissionIsEnabledOrNot())
@@ -108,29 +90,37 @@ public class HomeActivity extends Activity implements
             }
         });
 
+        LocationClick.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                startActivity(new Intent(HomeActivity.this, MapsActivity.class));
+            }
+        });
+
 
     }
 
 
     void SendSosData(boolean sos)
     {
+        DataClient dataclient = Wearable.getDataClient(getApplicationContext());
         GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
         double lat = gpsTracker.getLatitude();
         double lon = gpsTracker.getLongitude();
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/Haenyeo_Health");
-        putDataMapReq.getDataMap().putString("HeartRate", "0.0");
+        putDataMapReq.getDataMap().putString("HeartRate", "0");
         putDataMapReq.getDataMap().putDouble("lat", lat);
         putDataMapReq.getDataMap().putDouble("lon", lon);
         putDataMapReq.getDataMap().putBoolean("sos", sos);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         putDataReq.setUrgent();
-        PendingResult<DataApi.DataItemResult> pendingResult =
-                Wearable.DataApi
-                        .putDataItem(googleClient, putDataReq);
+        Task<DataItem> putDataTask = dataclient.putDataItem(putDataReq);
+
     }
 
     void sendData(String heartrate) {
 
+        DataClient dataclient = Wearable.getDataClient(getApplicationContext());
 
         GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
         double lat = gpsTracker.getLatitude();
@@ -142,9 +132,7 @@ public class HomeActivity extends Activity implements
         putDataMapReq.getDataMap().putBoolean("sos", false);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         putDataReq.setUrgent();
-        PendingResult<DataApi.DataItemResult> pendingResult =
-                Wearable.DataApi
-                        .putDataItem(googleClient, putDataReq);
+        Task<DataItem> putDataTask = dataclient.putDataItem(putDataReq);
 
     }
 
@@ -167,14 +155,15 @@ public class HomeActivity extends Activity implements
 
         if (event.sensor.getType() == Sensor.TYPE_HEART_RATE) {
             int heart_rate = (int) event.values[0];
-            if (heart_rate > 0) {
+            if (heart_rate>=40 && heart_rate<=220)
+            {
                 animator.setDuration(60000 / heart_rate);
                 animator.start();
+                TextHearRate.setText(Integer.toString(heart_rate) +"");
+                sendData(Integer.toString(heart_rate));
             }
-            //Toast.makeText(getApplicationContext(), Float.toString(heart_rate), Toast.LENGTH_LONG).show();
-            TextHearRate.setText(Integer.toString(heart_rate) +"");
-            sendData(Integer.toString(heart_rate));
-        } else {
+        }
+        else {
             // Do nothing
         }
 
@@ -185,10 +174,6 @@ public class HomeActivity extends Activity implements
 
     }
 
-    //on successful connection to play services, add data listner
-    public void onConnected(Bundle connectionHint) {
-        Wearable.DataApi.addListener(googleClient, this);
-    }
 
     public boolean foregroundServiceRunning(){
         ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
@@ -203,7 +188,8 @@ public class HomeActivity extends Activity implements
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();
-        googleClient.connect();
+        Wearable.getDataClient(this).addListener(this);
+
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("stop");
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -218,16 +204,11 @@ public class HomeActivity extends Activity implements
         }
     }
 
-    //on suspended connection, remove play services
-    public void onConnectionSuspended(int cause) {
-        Wearable.DataApi.removeListener(googleClient, this);
-    }
-
     //pause listener, disconnect play services
     public void onPause(){
         super.onPause();
-        Wearable.DataApi.removeListener(googleClient, this);
-        googleClient.disconnect();
+        Wearable.getDataClient(this).removeListener(this);
+
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("start");
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -242,10 +223,6 @@ public class HomeActivity extends Activity implements
         }
     }
 
-    //On failed connection to play services, remove the data listener
-    public void onConnectionFailed(ConnectionResult result) {
-        Wearable.DataApi.removeListener(googleClient, this);
-    }
 
     //function triggered every time there's a data change event
     public void onDataChanged(DataEventBuffer dataEvents) {

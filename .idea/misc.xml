@@ -25,6 +25,7 @@
         <entry key="app/src/main/res/layout/activity_splash.xml" value="0.2" />
         <entry key="app/src/main/res/menu/bottom_nav_menu.xml" value="0.2824074074074074" />
         <entry key="app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml" value="1.25625" />
+        <entry key="app/src/main/res/xml/network_security_config.xml" value="1.005813953488372" />
         <entry key="wearos/src/main/res/drawable/custom_btn.xml" value="0.61875" />
         <entry key="wearos/src/main/res/drawable/custom_button.xml" value="0.1609375" />
         <entry key="wearos/src/main/res/drawable/custom_card.xml" value="0.7222222222222222" />
