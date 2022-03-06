@@ -64,14 +64,14 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
     // on calling this method
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        if (intent.getAction()!=null)
+        if (intent!=null)
         {
             if (intent.getAction().equals("start")) {
                 Wearable.getDataClient(this).addListener(this);
 
                 createNotificationChannel();
                 Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                        .setContentTitle("해녀건강")
+                        .setContentTitle("Woman Sea Diver")
                         .setContentText("Health Service is running")
                         .setSmallIcon(R.drawable.ic_notifications)
                         .build();
@@ -93,7 +93,7 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
-                    "해녀건강 Service Channel",
+                    "Woman Sea Diver Service Channel",
                     NotificationManager.IMPORTANCE_DEFAULT
             );
             NotificationManager manager = getSystemService(NotificationManager.class);
@@ -179,7 +179,7 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
             Intent callIntent = new Intent(Intent.ACTION_CALL);
             callIntent.setData(Uri.parse("tel:" + number));
             callIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(callIntent);
+            getApplicationContext().startActivity(callIntent);
         }
     }
 
@@ -190,7 +190,7 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
 
         JSONObject HRval = new JSONObject();
         try {
-            data.put("IMEI", getImei());
+            data.put("IMEI", "");
             data.put("HR_MIN", heartrate);
             data.put("HR_MAX", heartrate);
 
@@ -222,7 +222,7 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
 
         JSONObject jobj = new JSONObject();
         try {
-            data.put("IMEI", getImei());
+            data.put("IMEI", "");
             jobj.put("ID", "SO");
             jobj.put("DATA", data);
         } catch (JSONException e) {
@@ -243,14 +243,6 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
                 Log.d("Error ",""+t.getMessage());
             }
         });
-    }
-
-    @SuppressLint("MissingPermission")
-    private String getImei()
-    {
-        TelephonyManager telephonyManager = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
-        IMEINumber = telephonyManager.getImei();
-        return IMEINumber;
     }
 
     @Override

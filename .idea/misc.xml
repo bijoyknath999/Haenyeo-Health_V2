@@ -34,8 +34,9 @@
         <entry key="wearos/src/main/res/drawable/custom_layout.xml" value="0.7422907488986784" />
         <entry key="wearos/src/main/res/drawable/ic_notifications.xml" value="0.20885416666666667" />
         <entry key="wearos/src/main/res/drawable/ic_progress_circle.xml" value="0.2945" />
-        <entry key="wearos/src/main/res/layout/activity_home.xml" value="0.9" />
+        <entry key="wearos/src/main/res/layout/activity_home.xml" value="0.45161290322580644" />
         <entry key="wearos/src/main/res/layout/activity_main.xml" value="0.67" />
+        <entry key="wearos/src/main/res/layout/activity_maps.xml" value="0.811046511627907" />
         <entry key="wearos/src/main/res/layout/activity_splash.xml" value="0.75" />
       </map>
     </option>

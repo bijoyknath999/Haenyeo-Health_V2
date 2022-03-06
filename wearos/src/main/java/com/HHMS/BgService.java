@@ -5,7 +5,9 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -43,30 +45,34 @@ public class BgService extends Service implements SensorEventListener, DataClien
     // on calling this method
     public int onStartCommand(Intent intent, int flags, int startId) {
 
-        if (intent.getAction().equals("start")) {
-            Wearable.getDataClient(this).addListener(this);
 
-            createNotificationChannel();
-            Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                    .setContentTitle("해녀건강")
-                    .setContentText("Health Service is running")
-                    .setSmallIcon(R.drawable.ic_notifications)
-                    .build();
-            startForeground(1, notification);
-            //do heavy work on a background thread
-            //stopSelf();
-            Log.d("Bg","Bging");
-            RequestChecker requestChecker = new RequestChecker(getApplicationContext());
-            if (requestChecker.CheckingPermissionIsEnabledOrNot())
-            {
-                getHeartRate();
+        if (intent!=null)
+        {
+
+            if (intent.getAction().equals("start")) {
+                Wearable.getDataClient(this).addListener(this);
+
+                createNotificationChannel();
+                Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
+                        .setContentTitle("Woman Sea Diver")
+                        .setContentText("Health Service is running")
+                        .setSmallIcon(R.drawable.ic_notifications)
+                        .build();
+                startForeground(1, notification);
+                //do heavy work on a background thread
+                //stopSelf();
+                Log.d("Bg","Bging");
+                RequestChecker requestChecker = new RequestChecker(getApplicationContext());
+                if (requestChecker.CheckingPermissionIsEnabledOrNot())
+                {
+                    getHeartRate();
+                }
             }
-        }
-        else if (intent.getAction().equals("stop")) {
-            stopall();
-        }
+            else if (intent.getAction().equals("stop")) {
+                stopall();
+            }
 
-
+        }
 
         return START_STICKY;
     }
@@ -75,7 +81,7 @@ public class BgService extends Service implements SensorEventListener, DataClien
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel serviceChannel = new NotificationChannel(
                     CHANNEL_ID,
-                    "해녀건강 Service Channel",
+                    "Woman Sea Diver Service Channel",
                     NotificationManager.IMPORTANCE_DEFAULT
             );
             NotificationManager manager = getSystemService(NotificationManager.class);
@@ -177,6 +183,9 @@ public class BgService extends Service implements SensorEventListener, DataClien
 
     @Override
     public boolean onKeyDown(View view, Editable editable, int i, KeyEvent keyEvent) {
+        Log.d("Testing",""+keyEvent.getKeyCode());
+        Toast.makeText(getApplicationContext(),""+keyEvent.getKeyCode(), Toast.LENGTH_SHORT).show();
+
         if (keyEvent.getKeyCode() == KeyEvent.KEYCODE_POWER) {
             i++;
             if(i==2){
@@ -185,16 +194,22 @@ public class BgService extends Service implements SensorEventListener, DataClien
             }
 
         }
+        else
+        {
+            Toast.makeText(getApplicationContext(),""+keyEvent.getKeyCode(), Toast.LENGTH_SHORT).show();
+        }
         return true;
     }
 
     @Override
     public boolean onKeyUp(View view, Editable editable, int i, KeyEvent keyEvent) {
+        Log.d("Testing",""+keyEvent.getKeyCode());
         return false;
     }
 
     @Override
     public boolean onKeyOther(View view, Editable editable, KeyEvent keyEvent) {
+        Log.d("Testing",""+keyEvent.getKeyCode());
         return false;
     }
 

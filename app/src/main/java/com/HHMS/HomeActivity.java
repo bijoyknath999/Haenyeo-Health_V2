@@ -21,6 +21,7 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.telephony.SmsManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
@@ -33,11 +34,18 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.wearable.CapabilityApi;
+import com.google.android.gms.wearable.CapabilityInfo;
 import com.google.android.gms.wearable.DataClient;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.Node;
+import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.snackbar.Snackbar;
@@ -46,13 +54,15 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Calendar;
+import java.util.List;
+import java.util.Set;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 
-public class HomeActivity extends AppCompatActivity implements DataClient.OnDataChangedListener {
+public class HomeActivity extends AppCompatActivity implements DataClient.OnDataChangedListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     String HeartData;
     private TextView tvHeartRate, tvwishes,tvnoheart;
@@ -64,8 +74,8 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
     private SharedPreferences sharedPreferences;
     private SharedPreferences.Editor editor;
     private RequestChecker requestChecker;
-    private static final int REQUEST_CODE = 101;
-    private String IMEINumber;
+    private GoogleApiClient googleClient;
+    private static final String FIND_ME_CAPABILITY_NAME = "find_me";
 
 
 
@@ -105,6 +115,14 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
         }
 
 
+        //data layer
+        googleClient = new GoogleApiClient.Builder(this)
+                .addApi(Wearable.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+
+
         navigationView = findViewById(R.id.navigation);
 
         navigationView.setOnNavigationItemSelectedListener(new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -139,6 +157,86 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
         if (!requestChecker.CheckingPermissionIsEnabledOrNot())
             requestChecker.RequestMultiplePermission();
 
+
+        googleClient.connect();
+        /*IsConnected();*/
+
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+
+        Log.d("Testing",""+androidId);
+
+    }
+
+
+    private void IsConnected(){
+        Wearable.NodeApi.getConnectedNodes(googleClient).setResultCallback(new ResultCallback<NodeApi.GetConnectedNodesResult>() {
+            @Override
+            public void onResult(@NonNull NodeApi.GetConnectedNodesResult getConnectedNodesResult) {
+                List<Node> connectedNodes =
+                        getConnectedNodesResult.getNodes();
+                Log.d("Tag","node"+connectedNodes.size());
+                if (connectedNodes.size()>0)
+                    StatusImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_online));
+                else
+                    StatusImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_offline));
+            }
+        });
+    }
+
+    private void setOrUpdateNotification() {
+        Wearable.CapabilityApi.getCapability(
+                googleClient, FIND_ME_CAPABILITY_NAME,
+                CapabilityApi.FILTER_REACHABLE).setResultCallback(
+                new ResultCallback<CapabilityApi.GetCapabilityResult>() {
+                    @Override
+                    public void onResult(CapabilityApi.GetCapabilityResult result) {
+                        if (result.getStatus().isSuccess()) {
+                            updateFindMeCapability(result.getCapability());
+                        } else {
+                            Log.e("Tag",
+                                    "setOrUpdateNotification() Failed to get capabilities, "
+                                            + "status: "
+                                            + result.getStatus().getStatusMessage());
+                        }
+                    }
+                });
+    }
+
+    private void updateFindMeCapability(CapabilityInfo capabilityInfo) {
+        Set<Node> connectedNodes = capabilityInfo.getNodes();
+        Log.d("Tag",""+connectedNodes);
+        if (connectedNodes.isEmpty()) {
+            StatusImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_offline));
+        } else {
+            for (Node node : connectedNodes) {
+                // we are only considering those nodes that are directly connected
+                if (node.isNearby()) {
+                    StatusImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_online));
+                }
+            }
+        }
+    }
+
+
+    //on successful connection to play services, add data listner
+    public void onConnected(Bundle connectionHint) {
+        Wearable.getDataClient(this).addListener(this);
+        setOrUpdateNotification();
+        Log.d("Tag",""+googleClient.isConnected());
+    }
+
+
+    //on suspended connection, remove play services
+    public void onConnectionSuspended(int cause) {
+        Wearable.getDataClient(this).removeListener(this);
+        Log.d("Tag","Suspend"+cause);
+    }
+
+    //On failed connection to play services, remove the data listener
+    public void onConnectionFailed(ConnectionResult result) {
+        Log.d("Tag","error :"+result.getErrorMessage());
+        Wearable.getDataClient(this).removeListener(this);
     }
 
     private void SendSOSServer()
@@ -147,7 +245,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
 
         JSONObject jobj = new JSONObject();
         try {
-            data.put("IMEI", getImei());
+            data.put("IMEI","");
             jobj.put("ID", "SO");
             jobj.put("DATA", data);
         } catch (JSONException e) {
@@ -176,7 +274,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
 
         JSONObject HRval = new JSONObject();
         try {
-            data.put("IMEI", getImei());
+            data.put("IMEI", "");
             data.put("HR_MIN", heartrate);
             data.put("HR_MAX", heartrate);
 
@@ -209,7 +307,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
 
         JSONObject LocData = new JSONObject();
         try {
-            data.put("IMEI", getImei());
+            data.put("IMEI", "");
             data.put("LAT", gpsTracker.getLatitude());
             data.put("LNG", gpsTracker.getLongitude());
 
@@ -237,7 +335,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
     }
 
 
-    @SuppressLint("MissingPermission")
+   /* @SuppressLint("MissingPermission")
     private String getImei()
     {
         if (!requestChecker.CheckingPermissionIsEnabledOrNot())
@@ -247,7 +345,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
         IMEINumber = telephonyManager.getImei();
 
         return IMEINumber;
-    }
+    }*/
 
     private void sosrun() {
         String number = sharedPreferences.getString("number","");
@@ -319,6 +417,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
     public void onResume(){
         super.onResume();
         Wearable.getDataClient(this).addListener(this);
+        googleClient.connect();
 
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("stop");
@@ -332,6 +431,9 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
             if (foregroundServiceRunning())
                 startService(startIntent);
         }
+
+        /*IsConnected();*/
+
     }
 
 
@@ -340,6 +442,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
     public void onPause(){
         super.onPause();
         Wearable.getDataClient(this).removeListener(this);
+        googleClient.disconnect();
 
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("start");
