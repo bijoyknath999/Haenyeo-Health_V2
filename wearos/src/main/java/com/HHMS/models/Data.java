@@ -1,23 +1,23 @@
 package com.HHMS.models;
 
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+
 public class Data {
 
-    String imei;
-    String dt;
+    @SerializedName("msg")
+    @Expose
+    private String msg;
 
-    public String getImei() {
-        return imei;
+    public Data(String msg) {
+        this.msg = msg;
     }
 
-    public void setImei(String imei) {
-        this.imei = imei;
+    public String getMsg() {
+        return msg;
     }
 
-    public String getDt() {
-        return dt;
-    }
-
-    public void setDt(String dt) {
-        this.dt = dt;
+    public void setMsg(String msg) {
+        this.msg = msg;
     }
 }

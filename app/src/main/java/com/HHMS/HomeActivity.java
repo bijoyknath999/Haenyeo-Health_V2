@@ -44,6 +44,8 @@ import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.MessageClient;
+import com.google.android.gms.wearable.MessageEvent;
 import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.Wearable;
@@ -62,7 +64,8 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 
-public class HomeActivity extends AppCompatActivity implements DataClient.OnDataChangedListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+public class HomeActivity extends AppCompatActivity implements DataClient.OnDataChangedListener, GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener{
 
     String HeartData;
     private TextView tvHeartRate, tvwishes,tvnoheart;
@@ -159,12 +162,10 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
 
 
         googleClient.connect();
-        /*IsConnected();*/
+        IsConnected();
 
         String androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
-
-        Log.d("Testing",""+androidId);
 
     }
 
@@ -184,45 +185,10 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
         });
     }
 
-    private void setOrUpdateNotification() {
-        Wearable.CapabilityApi.getCapability(
-                googleClient, FIND_ME_CAPABILITY_NAME,
-                CapabilityApi.FILTER_REACHABLE).setResultCallback(
-                new ResultCallback<CapabilityApi.GetCapabilityResult>() {
-                    @Override
-                    public void onResult(CapabilityApi.GetCapabilityResult result) {
-                        if (result.getStatus().isSuccess()) {
-                            updateFindMeCapability(result.getCapability());
-                        } else {
-                            Log.e("Tag",
-                                    "setOrUpdateNotification() Failed to get capabilities, "
-                                            + "status: "
-                                            + result.getStatus().getStatusMessage());
-                        }
-                    }
-                });
-    }
-
-    private void updateFindMeCapability(CapabilityInfo capabilityInfo) {
-        Set<Node> connectedNodes = capabilityInfo.getNodes();
-        Log.d("Tag",""+connectedNodes);
-        if (connectedNodes.isEmpty()) {
-            StatusImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_offline));
-        } else {
-            for (Node node : connectedNodes) {
-                // we are only considering those nodes that are directly connected
-                if (node.isNearby()) {
-                    StatusImage.setImageDrawable(getResources().getDrawable(R.drawable.ic_online));
-                }
-            }
-        }
-    }
-
 
     //on successful connection to play services, add data listner
     public void onConnected(Bundle connectionHint) {
         Wearable.getDataClient(this).addListener(this);
-        setOrUpdateNotification();
         Log.d("Tag",""+googleClient.isConnected());
     }
 
@@ -335,18 +301,6 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
     }
 
 
-   /* @SuppressLint("MissingPermission")
-    private String getImei()
-    {
-        if (!requestChecker.CheckingPermissionIsEnabledOrNot())
-            requestChecker.RequestMultiplePermission();
-
-        TelephonyManager telephonyManager = (TelephonyManager) getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
-        IMEINumber = telephonyManager.getImei();
-
-        return IMEINumber;
-    }*/
-
     private void sosrun() {
         String number = sharedPreferences.getString("number","");
         if (!number.isEmpty())
@@ -432,7 +386,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
                 startService(startIntent);
         }
 
-        /*IsConnected();*/
+        IsConnected();
 
     }
 

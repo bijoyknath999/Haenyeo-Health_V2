@@ -11,6 +11,8 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -25,18 +27,31 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
+import com.HHMS.models.Result;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.SuccessContinuation;
 import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.android.gms.wearable.CapabilityApi;
+import com.google.android.gms.wearable.CapabilityClient;
 import com.google.android.gms.wearable.CapabilityInfo;
 import com.google.android.gms.wearable.DataClient;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.MessageApi;
+import com.google.android.gms.wearable.MessageClient;
+import com.google.android.gms.wearable.MessageOptions;
 import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
@@ -46,8 +61,12 @@ import com.google.android.gms.wearable.Wearable;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -69,6 +88,17 @@ public class HomeActivity extends WearableActivity
     private GoogleApiClient googleClient;
     private boolean IsConnected;
     private static final String FIND_ME_CAPABILITY_NAME = "find_me";
+    private static final long CONNECTION_TIME_OUT_MS = 100;
+    private String nodeId;
+    private static final String MOBILE_PATH = "/mobile";
+    private static final String SET_MESSAGE_CAPABILITY = "setString";
+    public static final String SET_MESSAGE_PATH = "/setString";
+    private static final String MESSAGE_TO_SEND = "Hello Bilbobx182 Made this";
+    private static String transcriptionNodeId;
+    CapabilityInfo capabilityInfo;
+
+
+
 
 
 
@@ -96,10 +126,10 @@ public class HomeActivity extends WearableActivity
         LocationClick = findViewById(R.id.home_check_location);
 
         RequestChecker requestChecker = new RequestChecker(HomeActivity.this);
-        if (requestChecker.CheckingPermissionIsEnabledOrNot())
-            getHeartRate();
+        /*if (requestChecker.CheckingPermissionIsEnabledOrNot())
+            //getHeartRate();
         else
-            requestChecker.RequestMultiplePermission();
+            requestChecker.RequestMultiplePermission();*/
 
         HeartRateClick.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -115,10 +145,7 @@ public class HomeActivity extends WearableActivity
         SOS.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (IsConnected)
-                    SendSosData(true);
-                else
-                    SendSOSServer();
+                SendSOSServer();
             }
         });
 
@@ -133,70 +160,15 @@ public class HomeActivity extends WearableActivity
         String androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
-        Toast.makeText(getApplicationContext(), "ID :"+androidId, Toast.LENGTH_SHORT).show();
-    }
+        //Toast.makeText(getApplicationContext(), "ID :"+androidId, Toast.LENGTH_SHORT).show();
 
-
-    private void IsConnected(){
-        Wearable.NodeApi.getConnectedNodes(googleClient).setResultCallback(new ResultCallback<NodeApi.GetConnectedNodesResult>() {
-            @Override
-            public void onResult(@NonNull NodeApi.GetConnectedNodesResult getConnectedNodesResult) {
-                List<Node> connectedNodes =
-                        getConnectedNodesResult.getNodes();
-                Log.d("Tag","node"+connectedNodes.size());
-                Toast.makeText(getApplicationContext(), "Total Nodes : "+connectedNodes.size(), Toast.LENGTH_SHORT).show();
-                if (connectedNodes.size()>0) {
-                    IsConnected = true;
-                    Toast.makeText(getApplicationContext(), "Connected", Toast.LENGTH_SHORT).show();
-                }
-                else {
-                    IsConnected = false;
-                    Toast.makeText(getApplicationContext(), "Disconnected", Toast.LENGTH_SHORT).show();
-                }
-
-            }
-        });
-    }
-
-    private void setOrUpdateNotification() {
-        Wearable.CapabilityApi.getCapability(
-                googleClient, FIND_ME_CAPABILITY_NAME,
-                CapabilityApi.FILTER_REACHABLE).setResultCallback(
-                new ResultCallback<CapabilityApi.GetCapabilityResult>() {
-                    @Override
-                    public void onResult(CapabilityApi.GetCapabilityResult result) {
-                        if (result.getStatus().isSuccess()) {
-                            updateFindMeCapability(result.getCapability());
-                        } else {
-                            Log.e("Tag",
-                                    "setOrUpdateNotification() Failed to get capabilities, "
-                                            + "status: "
-                                            + result.getStatus().getStatusMessage());
-                        }
-                    }
-                });
-    }
-
-    private void updateFindMeCapability(CapabilityInfo capabilityInfo) {
-        Set<Node> connectedNodes = capabilityInfo.getNodes();
-        Log.d("Tag",""+connectedNodes);
-        if (connectedNodes.isEmpty()) {
-            IsConnected = false;
-        } else {
-            for (Node node : connectedNodes) {
-                // we are only considering those nodes that are directly connected
-                if (node.isNearby()) {
-                   IsConnected = true;
-                }
-            }
-        }
     }
 
     //on successful connection to play services, add data listner
     public void onConnected(Bundle connectionHint) {
         Wearable.getDataClient(this).addListener(this);
         Log.d("Tag",""+googleClient.isConnected());
-        setOrUpdateNotification();
+       // setOrUpdateNotification();
 /*
         IsConnected();
 */
@@ -236,7 +208,11 @@ public class HomeActivity extends WearableActivity
         putDataReq.setUrgent();
         Task<DataItem> putDataTask = dataclient.putDataItem(putDataReq);
 
+
+
+
     }
+
 
     void sendData(String heartrate) {
 
@@ -364,53 +340,46 @@ public class HomeActivity extends WearableActivity
         }
     }
 
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event){
-        if (event.getRepeatCount() == 0) {
-            if (keyCode == KeyEvent.KEYCODE_STEM_1) {
-                Toast.makeText(this, "one", Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (keyCode == KeyEvent.KEYCODE_STEM_2) {
-                Toast.makeText(this, "two", Toast.LENGTH_SHORT).show();
-                return true;
-            } else if (keyCode == KeyEvent.KEYCODE_STEM_3) {
-                Toast.makeText(this, "three", Toast.LENGTH_SHORT).show();
-                return true;
-            }
-            else if (keyCode == KeyEvent.KEYCODE_POWER)
-            {
-                Toast.makeText(this, "power", Toast.LENGTH_SHORT).show();
-            }
-            else
-            {
-                Toast.makeText(this, "button"+keyCode, Toast.LENGTH_SHORT).show();
-            }
-        }
-        return super.onKeyDown(keyCode, event);
-    }
 
 
     private void SendSOSServer()
     {
-        Log.d("Testing ","Testing");
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
 
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = new Date();
+
+        Log.d("Testing",""+androidId);
+        Log.d("Testing",""+formatter.format(date));
         JSONObject data = new JSONObject();
 
         JSONObject jobj = new JSONObject();
         try {
-            data.put("IMEI","");
+            data.put("EQ_ID",""+androidId);
+            data.put("DT",""+formatter.format(date));
             jobj.put("ID", "SO");
             jobj.put("DATA", data);
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<String>() {
+
+        Log.d("Testing",""+jobj.toString());
+
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
             @Override
-            public void onResponse(Call<String> call, Response<String> response) {
+            public void onResponse(Call<Result> call, Response<Result> response) {
                 if (response.isSuccessful() && response.body() != null)
                 {
-                    Toast.makeText(getApplicationContext(), "SOS Signal send successfully!!", Toast.LENGTH_SHORT).show();
+                    if (response.body().getResult())
+                    {
+                        Toast.makeText(getApplicationContext(), "SOS Signal send successfully!!", Toast.LENGTH_SHORT).show();
+                    }
+                    else
+                    {
+                        Toast.makeText(getApplicationContext(), "Error :"+response.body().getData().getMsg(), Toast.LENGTH_SHORT).show();
+                    }
                 }
                 else
                 {
@@ -419,10 +388,13 @@ public class HomeActivity extends WearableActivity
             }
 
             @Override
-            public void onFailure(Call<String> call, Throwable t) {
+            public void onFailure(Call<Result> call, Throwable t) {
                 Toast.makeText(getApplicationContext(), "Error :"+t.getMessage(), Toast.LENGTH_SHORT).show();
                 Log.d("Testing ",""+t.getMessage());
             }
         });
     }
+
+
+
 }
