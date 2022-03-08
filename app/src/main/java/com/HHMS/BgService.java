@@ -10,8 +10,10 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.BitmapFactory;
@@ -19,6 +21,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.telephony.SmsManager;
 import android.telephony.TelephonyManager;
 import android.text.Editable;
@@ -31,32 +34,42 @@ import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.drawable.IconCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import com.HHMS.models.Result;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.android.gms.wearable.DataApi;
 import com.google.android.gms.wearable.DataClient;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.DataMapItem;
+import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.Wearable;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class BgService extends Service implements DataClient.OnDataChangedListener, KeyListener {
+public class BgService extends Service implements DataClient.OnDataChangedListener {
 
 
     public static final String CHANNEL_ID = "ForegroundServiceChannel";
     private SharedPreferences sharedPreferences;
-    private String IMEINumber;
-
+    private String datapath = "/message_path";
+    private String message = "0";
 
 
 
@@ -80,6 +93,9 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
                 //stopSelf();
                 Log.d("Bg","Bging");
 
+                IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SEND);
+                BgService.MessageReceiver messageReceiver = new BgService.MessageReceiver();
+                LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);
             }
             else if (intent.getAction().equals("stop")) {
                 stopall();
@@ -115,6 +131,8 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
 
         stopForeground(true);
         stopSelf();
+        BgService.MessageReceiver messageReceiver = new BgService.MessageReceiver();
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(messageReceiver);
     }
 
     @Override
@@ -145,20 +163,12 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
                 DataMapItem dataMapItem = DataMapItem.fromDataItem(item);
 
                 if(item.getUri().getPath().equals("/Haenyeo_Health")){
-                    double lat = dataMapItem.getDataMap().getDouble("lat");
-                    double lon = dataMapItem.getDataMap().getDouble("lon");
-                    boolean sos = dataMapItem.getDataMap().getBoolean("sos");
-                    Log.d("Tag","->lat :"+lat+", lon :"+lon);
                     String HeartData = dataMapItem.getDataMap().getString("HeartRate");
                     int heartrate = Integer.parseInt(HeartData);
+                    Log.d("Testing",""+heartrate);
                     if (heartrate>=40 && heartrate <= 220)
                     {
                         SendHeartRateServer(Integer.parseInt(HeartData));
-                    }
-                    if (sos)
-                    {
-                        sosrunWear(lat,lon);
-                        SendSOSServer();
                     }
                 }
                 else
@@ -183,98 +193,167 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
         }
     }
 
+    private void sosrun() {
+        GpsTracker gpsTracker = new GpsTracker(getApplicationContext());
+        sharedPreferences = getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
+        String number = sharedPreferences.getString("number","");
+        if (!number.isEmpty()) {
+            SmsManager smsManager = SmsManager.getDefault();
+            smsManager.sendTextMessage(number, null, "Emergency SOS\nYou're receiving this message this contact has listed you as an emergency contact.\n" +
+                    "https://maps.google.com/?q=" + gpsTracker.getLatitude() + "," + gpsTracker.getLongitude(), null, null);
+            Intent callIntent = new Intent(Intent.ACTION_CALL);
+            callIntent.setData(Uri.parse("tel:" + number));
+            callIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getApplicationContext().startActivity(callIntent);
+        }
+    }
+
 
     private void SendHeartRateServer(int heartrate)
     {
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = new Date();
+
         JSONObject data = new JSONObject();
 
-        JSONObject HRval = new JSONObject();
+        JSONObject jobj = new JSONObject();
         try {
-            data.put("IMEI", "");
-            data.put("HR_MIN", heartrate);
-            data.put("HR_MAX", heartrate);
-
-            HRval.put("ID", "HR");
-            HRval.put("DATA", data);
+            data.put("EQ_ID",""+androidId);
+            data.put("HR_MIN", ""+0);
+            data.put("HR_MAX", ""+heartrate);
+            data.put("DT",""+formatter.format(date));
+            jobj.put("ID", "HR");
+            jobj.put("DATA", data);
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        ApiInterface.getRequestApiInterface().sendData(HRval.toString()).enqueue(new Callback<String>() {
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
             @Override
-            public void onResponse(Call<String> call, Response<String> response) {
+            public void onResponse(Call<Result> call, Response<Result> response) {
                 if (response.isSuccessful() && response.body() != null)
                 {
-                    Log.d("HeartRate ",""+response.body());
+                    if (response.body().getResult())
+                    {
+                        Log.d("Testing","Heart Rate Sent.");
+                    }
                 }
             }
 
             @Override
-            public void onFailure(Call<String> call, Throwable t) {
-                Log.d("Error ",""+t.getMessage());
+            public void onFailure(Call<Result> call, Throwable t) {
+                Log.d("Testing ",""+t.getMessage());
             }
         });
     }
 
     private void SendSOSServer()
     {
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = new Date();
+
         JSONObject data = new JSONObject();
 
         JSONObject jobj = new JSONObject();
         try {
-            data.put("IMEI", "");
+            data.put("EQ_ID",""+androidId);
+            data.put("DT",""+formatter.format(date));
             jobj.put("ID", "SO");
             jobj.put("DATA", data);
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<String>() {
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
             @Override
-            public void onResponse(Call<String> call, Response<String> response) {
+            public void onResponse(Call<Result> call, Response<Result> response) {
                 if (response.isSuccessful() && response.body() != null)
                 {
-                    Log.d("SOS ",""+response.body());
+                    if (response.body().getResult())
+                    {
+                        Log.d("Testing","SOS Sent bg.");
+                    }
                 }
             }
 
             @Override
-            public void onFailure(Call<String> call, Throwable t) {
+            public void onFailure(Call<Result> call, Throwable t) {
                 Log.d("Error ",""+t.getMessage());
             }
         });
     }
+    //setup a broadcast receiver to receive the messages from the wear device via the listenerService.
+    public class MessageReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String message = intent.getStringExtra("message");
 
-    @Override
-    public int getInputType() {
-        return 0;
-    }
 
-    @Override
-    public boolean onKeyDown(View view, Editable editable, int i, KeyEvent keyEvent) {
-        if (keyEvent.getKeyCode() == KeyEvent.KEYCODE_POWER) {
-            i++;
-            if(i==2){
-                Toast.makeText(getApplicationContext(),"SOS Data Send Successfully !!", Toast.LENGTH_SHORT).show();
-                i=0;
+            if(message.equals("0")) {
+                SendMessage();
+                sosrun();
+                SendSOSServer();
             }
-
+            else
+            {
+                SendMessage();
+                double lat = Double.parseDouble(message.substring(0, message.indexOf('_')));
+                double lon = Double.parseDouble(message.substring(message.indexOf("_") + 1));
+                sosrunWear(lat,lon);
+                SendSOSServer();
+            }
         }
-        return true;
     }
 
-    @Override
-    public boolean onKeyUp(View view, Editable editable, int i, KeyEvent keyEvent) {
-        return false;
-    }
+    private void SendMessage()
+    {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //first get all the nodes, ie connected wearable devices.
+                Task<List<Node>> nodeListTask =
+                        Wearable.getNodeClient(getApplicationContext()).getConnectedNodes();
+                try {
+                    // Block on a task and get the result synchronously (because this is on a background
+                    // thread).
+                    List<Node> nodes = Tasks.await(nodeListTask);
 
-    @Override
-    public boolean onKeyOther(View view, Editable editable, KeyEvent keyEvent) {
-        return false;
-    }
 
-    @Override
-    public void clearMetaKeyState(View view, Editable editable, int i) {
+
+                    //Now send the message to each device.
+                    for (Node node : nodes) {
+                        Task<Integer> sendMessageTask =
+                                Wearable.getMessageClient(getApplicationContext()).sendMessage(node.getId(), datapath, message.getBytes());
+
+                        try {
+                            // Block on a task and get the result synchronously (because this is on a background
+                            // thread).
+                            Integer result = Tasks.await(sendMessageTask);
+                            Log.v("Testing", "SendThread: message send to " + node.getDisplayName());
+
+                        } catch (ExecutionException exception) {
+                            Log.e("Testing", "Task failed: " + exception);
+
+                        } catch (InterruptedException exception) {
+                            Log.e("Testing", "Interrupt occurred: " + exception);
+                        }
+
+                    }
+
+                } catch (ExecutionException exception) {
+                    Log.e("Testing", "Task failed: " + exception);
+
+                } catch (InterruptedException exception) {
+                    Log.e("Testing", "Interrupt occurred: " + exception);
+                }
+            }
+        }).start();
 
     }
 }

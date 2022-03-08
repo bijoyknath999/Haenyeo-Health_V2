@@ -33,7 +33,7 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
-public class BgService extends Service implements SensorEventListener, DataClient.OnDataChangedListener, KeyListener {
+public class BgService extends Service implements SensorEventListener, DataClient.OnDataChangedListener {
 
 
     private SensorManager sensorService;
@@ -164,57 +164,10 @@ public class BgService extends Service implements SensorEventListener, DataClien
 
     void sendData(String heartrate) {
         DataClient dataclient = Wearable.getDataClient(getApplicationContext());
-        GpsTracker gpsTracker = new GpsTracker(getApplicationContext());
-        double lat = gpsTracker.getLatitude();
-        double lon = gpsTracker.getLongitude();
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/Haenyeo_Health");
         putDataMapReq.getDataMap().putString("HeartRate", heartrate);
-        putDataMapReq.getDataMap().putDouble("lat", lat);
-        putDataMapReq.getDataMap().putDouble("lon", lon);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         putDataReq.setUrgent();
         Task<DataItem> putDataTask = dataclient.putDataItem(putDataReq);
-    }
-
-    @Override
-    public int getInputType() {
-        return 0;
-    }
-
-    @Override
-    public boolean onKeyDown(View view, Editable editable, int i, KeyEvent keyEvent) {
-        Log.d("Testing",""+keyEvent.getKeyCode());
-        Toast.makeText(getApplicationContext(),""+keyEvent.getKeyCode(), Toast.LENGTH_SHORT).show();
-
-        if (keyEvent.getKeyCode() == KeyEvent.KEYCODE_POWER) {
-            i++;
-            if(i==2){
-                Toast.makeText(getApplicationContext(),"SOS Data Send Successfully !!", Toast.LENGTH_SHORT).show();
-                i=0;
-            }
-
-        }
-        else
-        {
-            Toast.makeText(getApplicationContext(),""+keyEvent.getKeyCode(), Toast.LENGTH_SHORT).show();
-        }
-        return true;
-    }
-
-    @Override
-    public boolean onKeyUp(View view, Editable editable, int i, KeyEvent keyEvent) {
-        Log.d("Testing",""+keyEvent.getKeyCode());
-        return false;
-    }
-
-    @Override
-    public boolean onKeyOther(View view, Editable editable, KeyEvent keyEvent) {
-        Log.d("Testing",""+keyEvent.getKeyCode());
-        return false;
-    }
-
-    @Override
-    public void clearMetaKeyState(View view, Editable editable, int i) {
-
     }
 }

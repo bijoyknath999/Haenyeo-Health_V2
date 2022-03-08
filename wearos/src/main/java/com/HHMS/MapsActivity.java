@@ -14,6 +14,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -29,7 +30,7 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
         AmbientModeSupport.AmbientCallbackProvider, LocationListener {
 
     private GoogleMap mMap;
-    private double latitude = 0.0, longitude = 0.0;
+    private double latitude = 0, longitude = 0;
     private LatLng latLng;
     private SupportMapFragment mapFragment;
     private LocationManager locationManager;
@@ -152,6 +153,8 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
         }
 
+        if (latitude == 0)
+            Toast.makeText(this, "Failed to get location, reopen this page.", Toast.LENGTH_SHORT).show();
 
         //it will get user current location full address
         latLng = new LatLng(latitude,longitude);
@@ -190,6 +193,21 @@ public class MapsActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onLocationChanged(@NonNull Location location) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(@NonNull String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(@NonNull String provider) {
+
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
 
     }
 }

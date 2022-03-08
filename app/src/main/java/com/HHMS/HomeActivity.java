@@ -10,12 +10,15 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.ActivityManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
@@ -34,9 +37,12 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.HHMS.models.Result;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.android.gms.wearable.CapabilityApi;
 import com.google.android.gms.wearable.CapabilityInfo;
 import com.google.android.gms.wearable.DataClient;
@@ -55,9 +61,12 @@ import com.google.android.material.snackbar.Snackbar;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -75,12 +84,10 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
     private BottomNavigationView navigationView;
     private RelativeLayout MainLayout;
     private SharedPreferences sharedPreferences;
-    private SharedPreferences.Editor editor;
     private RequestChecker requestChecker;
     private GoogleApiClient googleClient;
-    private static final String FIND_ME_CAPABILITY_NAME = "find_me";
-
-
+    private String datapath = "/message_path";
+    private String message = "0";
 
 
 
@@ -164,8 +171,10 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
         googleClient.connect();
         IsConnected();
 
-        String androidId = Settings.Secure.getString(getContentResolver(),
-                Settings.Secure.ANDROID_ID);
+        // Register the local broadcast receiver
+        IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SEND);
+        MessageReceiver messageReceiver = new MessageReceiver();
+        LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);
 
     }
 
@@ -207,28 +216,38 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
 
     private void SendSOSServer()
     {
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = new Date();
+
         JSONObject data = new JSONObject();
 
         JSONObject jobj = new JSONObject();
         try {
-            data.put("IMEI","");
+            data.put("EQ_ID",""+androidId);
+            data.put("DT",""+formatter.format(date));
             jobj.put("ID", "SO");
             jobj.put("DATA", data);
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<String>() {
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
             @Override
-            public void onResponse(Call<String> call, Response<String> response) {
+            public void onResponse(Call<Result> call, Response<Result> response) {
                 if (response.isSuccessful() && response.body() != null)
                 {
-                    Log.d("SOS ",""+response.body());
+                    if (response.body().getResult())
+                    {
+                        Log.v("Testing","SOS Sended from phone");
+                    }
                 }
             }
 
             @Override
-            public void onFailure(Call<String> call, Throwable t) {
+            public void onFailure(Call<Result> call, Throwable t) {
                 Log.d("Error ",""+t.getMessage());
             }
         });
@@ -236,31 +255,42 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
 
     private void SendHeartRateServer(int heartrate)
     {
+
+
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = new Date();
+
         JSONObject data = new JSONObject();
 
-        JSONObject HRval = new JSONObject();
+        JSONObject jobj = new JSONObject();
         try {
-            data.put("IMEI", "");
-            data.put("HR_MIN", heartrate);
-            data.put("HR_MAX", heartrate);
-
-            HRval.put("ID", "HR");
-            HRval.put("DATA", data);
+            data.put("EQ_ID",""+androidId);
+            data.put("HR_MIN", ""+0);
+            data.put("HR_MAX", ""+heartrate);
+            data.put("DT",""+formatter.format(date));
+            jobj.put("ID", "HR");
+            jobj.put("DATA", data);
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        ApiInterface.getRequestApiInterface().sendData(HRval.toString()).enqueue(new Callback<String>() {
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
             @Override
-            public void onResponse(Call<String> call, Response<String> response) {
+            public void onResponse(Call<Result> call, Response<Result> response) {
                 if (response.isSuccessful() && response.body() != null)
                 {
-                    Log.d("HeartRate ",""+response.body());
+                    if (response.body().getResult())
+                    {
+                        Log.v("Testing","HeartRate Sended");
+                    }
                 }
             }
 
             @Override
-            public void onFailure(Call<String> call, Throwable t) {
+            public void onFailure(Call<Result> call, Throwable t) {
                 Log.d("Error ",""+t.getMessage());
             }
         });
@@ -269,32 +299,51 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
     private void SendLocationServer()
     {
         GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
+
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = new Date();
+
+        Log.d("Testing",""+gpsTracker.getLatitude());
+
         JSONObject data = new JSONObject();
 
-        JSONObject LocData = new JSONObject();
+        JSONObject jobj = new JSONObject();
         try {
-            data.put("IMEI", "");
-            data.put("LAT", gpsTracker.getLatitude());
-            data.put("LNG", gpsTracker.getLongitude());
-
-            LocData.put("ID", "LP");
-            LocData.put("DATA", data);
+            data.put("EQ_ID",""+androidId);
+            data.put("LAT", ""+gpsTracker.getLatitude());
+            data.put("LNG", ""+gpsTracker.getLongitude());
+            data.put("DT",""+formatter.format(date));
+            jobj.put("ID", "LP");
+            jobj.put("DATA", data);
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
-        ApiInterface.getRequestApiInterface().sendData(LocData.toString()).enqueue(new Callback<String>() {
+
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
             @Override
-            public void onResponse(Call<String> call, Response<String> response) {
+            public void onResponse(Call<Result> call, Response<Result> response) {
                 if (response.isSuccessful() && response.body() != null)
                 {
+                    if (response.body().getResult())
+                    {
+                        Log.v("Testing","Location Sended from phone");
+                    }
+                    Log.v("Testing","loc"+response.body().getData().getMsg());
                     startActivity(new Intent(HomeActivity.this, MapsActivity.class));
+                }
+                else
+                {
+                    startActivity(new Intent(HomeActivity.this, MapsActivity.class));
+
                 }
             }
 
             @Override
-            public void onFailure(Call<String> call, Throwable t) {
-                Log.d("Testing3",""+t.getMessage());
+            public void onFailure(Call<Result> call, Throwable t) {
                 startActivity(new Intent(HomeActivity.this, MapsActivity.class));
             }
         });
@@ -309,10 +358,12 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
                     && ContextCompat.checkSelfPermission(HomeActivity.this, ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                     && ContextCompat.checkSelfPermission(HomeActivity.this, SEND_SMS) == PackageManager.PERMISSION_GRANTED)
             {
+
                 GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
+                String message = "Emergency SOS\nYou're receiving this message this contact has listed you as an emergency contact.\n" +
+                        "https://maps.google.com/?q="+gpsTracker.getLatitude()+","+gpsTracker.getLongitude();
                 SmsManager smsManager = SmsManager.getDefault();
-                smsManager.sendTextMessage(number,null,"Emergency SOS" +
-                        "https://maps.google.com/?q="+gpsTracker.getLatitude()+","+gpsTracker.getLongitude(),null,null);
+                smsManager.sendTextMessage(number,null,message,null,null);
                 Snackbar snackbar = Snackbar
                         .make(MainLayout, "Message Sent Successfully!!!", Snackbar.LENGTH_LONG);
                 snackbar.show();
@@ -336,10 +387,10 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
                     && ContextCompat.checkSelfPermission(HomeActivity.this, ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
                     && ContextCompat.checkSelfPermission(HomeActivity.this, SEND_SMS) == PackageManager.PERMISSION_GRANTED)
             {
-                GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
+                String message = "Emergency SOS\nYou're receiving this message this contact has listed you as an emergency contact.\n" +
+                        "https://maps.google.com/?q="+lat+","+lon;
                 SmsManager smsManager = SmsManager.getDefault();
-                smsManager.sendTextMessage(number,null,"Emergency SOS\n" +
-                        "https://maps.google.com/?q="+lat+","+lon,null,null);
+                smsManager.sendTextMessage(number,null,message,null,null);
                 Snackbar snackbar = Snackbar
                         .make(MainLayout, "Message Sent Successfully!!!", Snackbar.LENGTH_LONG);
                 snackbar.show();
@@ -373,6 +424,15 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
         Wearable.getDataClient(this).addListener(this);
         googleClient.connect();
 
+
+
+        IsConnected();
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("stop");
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -385,19 +445,18 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
             if (foregroundServiceRunning())
                 startService(startIntent);
         }
-
-        IsConnected();
-
     }
-
-
 
     //pause listener, disconnect play services
     public void onPause(){
         super.onPause();
         Wearable.getDataClient(this).removeListener(this);
         googleClient.disconnect();
+    }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("start");
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -429,10 +488,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
                 if(item.getUri().getPath().equals("/Haenyeo_Health")){
                     double lat = dataMapItem.getDataMap().getDouble("lat");
                     double lon = dataMapItem.getDataMap().getDouble("lon");
-                    boolean sos = dataMapItem.getDataMap().getBoolean("sos");
-                    Log.d("Tag","->lat :"+lat+", lon :"+lon);
                     HeartData = dataMapItem.getDataMap().getString("HeartRate");
-                    Log.d("Tag",""+HeartData);
 
                     int heartrate = Integer.parseInt(HeartData);
                     if (heartrate>=40 && heartrate <= 220)
@@ -444,13 +500,6 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
                         progressBar.setMin(40);
                         progressBar.setProgress(Integer.parseInt(HeartData));
                         SendHeartRateServer(Integer.parseInt(HeartData));
-                    }
-
-                    if (sos)
-                    {
-                        Log.d("Tag","SOS");
-                        sosrunWear(lat,lon);
-                        SendSOSServer();
                     }
                 }
                 else
@@ -466,4 +515,75 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
     public void onPointerCaptureChanged(boolean hasCapture) {
         super.onPointerCaptureChanged(hasCapture);
     }
+
+
+    private void SendMessage()
+    {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //first get all the nodes, ie connected wearable devices.
+                Task<List<Node>> nodeListTask =
+                        Wearable.getNodeClient(getApplicationContext()).getConnectedNodes();
+                try {
+                    // Block on a task and get the result synchronously (because this is on a background
+                    // thread).
+                    List<Node> nodes = Tasks.await(nodeListTask);
+
+
+
+                    //Now send the message to each device.
+                    for (Node node : nodes) {
+                        Task<Integer> sendMessageTask =
+                                Wearable.getMessageClient(HomeActivity.this).sendMessage(node.getId(), datapath, message.getBytes());
+
+                        try {
+                            // Block on a task and get the result synchronously (because this is on a background
+                            // thread).
+                            Integer result = Tasks.await(sendMessageTask);
+                            Log.v("Testing", "SendThread: message send to " + node.getDisplayName());
+
+                        } catch (ExecutionException exception) {
+                            Log.e("Testing", "Task failed: " + exception);
+
+                        } catch (InterruptedException exception) {
+                            Log.e("Testing", "Interrupt occurred: " + exception);
+                        }
+
+                    }
+
+                } catch (ExecutionException exception) {
+                    Log.e("Testing", "Task failed: " + exception);
+
+                } catch (InterruptedException exception) {
+                    Log.e("Testing", "Interrupt occurred: " + exception);
+                }
+            }
+        }).start();
+
+    }
+
+    //setup a broadcast receiver to receive the messages from the wear device via the listenerService.
+    public class MessageReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String message = intent.getStringExtra("message");
+
+
+            if(message.equals("0")) {
+                SendMessage();
+                sosrun();
+                SendSOSServer();
+            }
+            else
+            {
+                SendMessage();
+                double lat = Double.parseDouble(message.substring(0, message.indexOf('_')));
+                double lon = Double.parseDouble(message.substring(message.indexOf("_") + 1));
+                sosrunWear(lat,lon);
+                SendSOSServer();
+            }
+        }
+    }
+
 }

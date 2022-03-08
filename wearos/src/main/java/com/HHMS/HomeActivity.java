@@ -1,20 +1,28 @@
 package com.HHMS;
 
+import android.Manifest;
 import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.ActivityManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.provider.Settings;
 import android.support.wearable.activity.WearableActivity;
 import android.util.Log;
@@ -28,6 +36,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.HHMS.models.Result;
 import com.google.android.gms.common.ConnectionResult;
@@ -68,15 +78,14 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import kotlin.ResultKt;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 public class HomeActivity extends WearableActivity
-        implements SensorEventListener, DataClient.OnDataChangedListener, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+        implements SensorEventListener, DataClient.OnDataChangedListener, LocationListener {
 
-    private Button button;
-    private TextView mTextView;
     TextView TextHearRate;
     ImageView ImgHeart;
     private ObjectAnimator animator;
@@ -85,17 +94,26 @@ public class HomeActivity extends WearableActivity
     private LinearLayout HeartRateClick, LocationClick;
     public static int i = 0;
     private LinearLayout SOS;
-    private GoogleApiClient googleClient;
-    private boolean IsConnected;
-    private static final String FIND_ME_CAPABILITY_NAME = "find_me";
-    private static final long CONNECTION_TIME_OUT_MS = 100;
-    private String nodeId;
-    private static final String MOBILE_PATH = "/mobile";
-    private static final String SET_MESSAGE_CAPABILITY = "setString";
-    public static final String SET_MESSAGE_PATH = "/setString";
-    private static final String MESSAGE_TO_SEND = "Hello Bilbobx182 Made this";
-    private static String transcriptionNodeId;
-    CapabilityInfo capabilityInfo;
+
+    String datapath = "/message_path";
+    String message = "0";
+    boolean check = false;
+
+    private LocationManager locationManager;
+    private Location location;
+    // The minimum distance to change Updates in meters
+    private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10; // 10 meters
+
+    // The minimum time between updates in milliseconds
+    private static final long MIN_TIME_BW_UPDATES = 1000 * 60 * 1; // 1 minute
+
+    // flag for GPS status
+    boolean isGPSEnabled = false;
+
+    // flag for network status
+    boolean isNetworkEnabled = false;
+
+    private double latitude = 0, longitude = 0;
 
 
 
@@ -108,17 +126,6 @@ public class HomeActivity extends WearableActivity
         setContentView(R.layout.activity_home);
 
 
-        //data layer
-        googleClient = new GoogleApiClient.Builder(this)
-                .addApi(Wearable.API)
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .build();
-
-        googleClient.connect();
-        /*IsConnected();*/
-
-
         TextHearRate = findViewById(R.id.text_heart_rate);
         ImgHeart = findViewById(R.id.image_heart);
         HeartRateClick = findViewById(R.id.home_heart_click);
@@ -126,10 +133,10 @@ public class HomeActivity extends WearableActivity
         LocationClick = findViewById(R.id.home_check_location);
 
         RequestChecker requestChecker = new RequestChecker(HomeActivity.this);
-        /*if (requestChecker.CheckingPermissionIsEnabledOrNot())
-            //getHeartRate();
+        if (requestChecker.CheckingPermissionIsEnabledOrNot())
+            getHeartRate();
         else
-            requestChecker.RequestMultiplePermission();*/
+            requestChecker.RequestMultiplePermission();
 
         HeartRateClick.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -145,55 +152,41 @@ public class HomeActivity extends WearableActivity
         SOS.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                SendSOSServer();
+                SendSOS();
             }
         });
 
         LocationClick.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                startActivity(new Intent(HomeActivity.this, MapsActivity.class));
+                SendLocationServer();
             }
         });
 
 
-        String androidId = Settings.Secure.getString(getContentResolver(),
-                Settings.Secure.ANDROID_ID);
+        // Register the local broadcast receiver
+        IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SEND);
+        MessageReceiver messageReceiver = new MessageReceiver();
+        LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);
+    }
 
-        //Toast.makeText(getApplicationContext(), "ID :"+androidId, Toast.LENGTH_SHORT).show();
+    private void SendSOS() {
+
+        GetNode();
+        final Handler handler = new Handler();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (check)
+                    Toast.makeText(HomeActivity.this, "SOS Successful!!", Toast.LENGTH_SHORT).show();
+                else
+                    SendSOSServer();
+            }
+        }, 1000);
 
     }
 
-    //on successful connection to play services, add data listner
-    public void onConnected(Bundle connectionHint) {
-        Wearable.getDataClient(this).addListener(this);
-        Log.d("Tag",""+googleClient.isConnected());
-       // setOrUpdateNotification();
-/*
-        IsConnected();
-*/
-    }
-
-
-    //on suspended connection, remove play services
-    public void onConnectionSuspended(int cause) {
-        Wearable.getDataClient(this).removeListener(this);
-/*
-        IsConnected();
-*/
-        Log.d("Tag","Suspend"+cause);
-    }
-
-    //On failed connection to play services, remove the data listener
-    public void onConnectionFailed(ConnectionResult result) {
-        Log.d("Tag","error :"+result.getErrorMessage());
-        Wearable.getDataClient(this).removeListener(this);
-/*
-        IsConnected();
-*/
-    }
-
-    void SendSosData(boolean sos)
+    /*void SendSosData(boolean sos)
     {
         DataClient dataclient = Wearable.getDataClient(getApplicationContext());
         GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
@@ -208,24 +201,24 @@ public class HomeActivity extends WearableActivity
         putDataReq.setUrgent();
         Task<DataItem> putDataTask = dataclient.putDataItem(putDataReq);
 
+        putDataTask.addOnSuccessListener(new OnSuccessListener<DataItem>() {
+            @Override
+            public void onSuccess(DataItem dataItem) {
+                Toast.makeText(HomeActivity.this, " Connected", Toast.LENGTH_SHORT).show();
+            }
+        });
 
 
 
-    }
+    }*/
 
 
     void sendData(String heartrate) {
 
         DataClient dataclient = Wearable.getDataClient(getApplicationContext());
 
-        GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
-        double lat = gpsTracker.getLatitude();
-        double lon = gpsTracker.getLongitude();
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/Haenyeo_Health");
         putDataMapReq.getDataMap().putString("HeartRate", heartrate);
-        putDataMapReq.getDataMap().putDouble("lat", lat);
-        putDataMapReq.getDataMap().putDouble("lon", lon);
-        putDataMapReq.getDataMap().putBoolean("sos", false);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         putDataReq.setUrgent();
         Task<DataItem> putDataTask = dataclient.putDataItem(putDataReq);
@@ -285,7 +278,8 @@ public class HomeActivity extends WearableActivity
     public void onResume(){
         super.onResume();
         Wearable.getDataClient(this).addListener(this);
-        googleClient.connect();
+        getLOcation();
+        GetNode();
 
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("stop");
@@ -305,7 +299,6 @@ public class HomeActivity extends WearableActivity
     public void onPause(){
         super.onPause();
         Wearable.getDataClient(this).removeListener(this);
-        googleClient.disconnect();
 
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("start");
@@ -350,8 +343,6 @@ public class HomeActivity extends WearableActivity
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
         Date date = new Date();
 
-        Log.d("Testing",""+androidId);
-        Log.d("Testing",""+formatter.format(date));
         JSONObject data = new JSONObject();
 
         JSONObject jobj = new JSONObject();
@@ -374,7 +365,8 @@ public class HomeActivity extends WearableActivity
                 {
                     if (response.body().getResult())
                     {
-                        Toast.makeText(getApplicationContext(), "SOS Signal send successfully!!", Toast.LENGTH_SHORT).show();
+                        Log.v("Testing","SOS Sended");
+                        Toast.makeText(HomeActivity.this, "SOS Send Successfully!!", Toast.LENGTH_SHORT).show();
                     }
                     else
                     {
@@ -396,5 +388,220 @@ public class HomeActivity extends WearableActivity
     }
 
 
+    private void SendLocationServer()
+    {
 
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = new Date();
+
+        JSONObject data = new JSONObject();
+
+        JSONObject jobj = new JSONObject();
+        try {
+            data.put("EQ_ID",""+androidId);
+            data.put("LAT", ""+latitude);
+            data.put("LNG", ""+longitude);
+            data.put("DT",""+formatter.format(date));
+            jobj.put("ID", "LP");
+            jobj.put("DATA", data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
+            @Override
+            public void onResponse(Call<Result> call, Response<Result> response) {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    Log.v("Testing","Location Sended");
+                    startActivity(new Intent(HomeActivity.this, MapsActivity.class));
+                }
+                else
+                {
+                    startActivity(new Intent(HomeActivity.this, MapsActivity.class));
+
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Result> call, Throwable t) {
+                startActivity(new Intent(HomeActivity.this, MapsActivity.class));
+            }
+        });
+    }
+
+
+    private void GetNode()
+    {
+        check = false;
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                //first get all the nodes, ie connected wearable devices.
+                Task<List<Node>> nodeListTask =
+                        Wearable.getNodeClient(getApplicationContext()).getConnectedNodes();
+                try {
+                    // Block on a task and get the result synchronously (because this is on a background
+                    // thread).
+                    List<Node> nodes = Tasks.await(nodeListTask);
+
+
+
+                    //Now send the message to each device.
+                    for (Node node : nodes) {
+
+                        Task<Integer> sendMessageTask = null;
+                        if (latitude!=0)
+                        {
+                            message = latitude+"_"+longitude;
+                            sendMessageTask =
+                                    Wearable.getMessageClient(HomeActivity.this).sendMessage(node.getId(),
+                                            datapath, message.getBytes());
+                        }
+                        else
+                        {
+                            message = "0";
+                            sendMessageTask =
+                                    Wearable.getMessageClient(HomeActivity.this).sendMessage(node.getId(),
+                                            datapath, message.getBytes());
+                        }
+
+
+                        try {
+                            // Block on a task and get the result synchronously (because this is on a background
+                            // thread).
+                            Integer result = Tasks.await(sendMessageTask);
+                            Log.v("Testing", "SendThread: message send to " + node.getDisplayName());
+
+                        } catch (ExecutionException exception) {
+                            Log.e("Testing", "Task failed2: " + exception);
+
+                        } catch (InterruptedException exception) {
+                            Log.e("Testing", "Interrupt occurred: " + exception);
+                        }
+
+                    }
+
+                } catch (ExecutionException exception) {
+                    Log.e("Testing", "Task failed: " + exception);
+
+                } catch (InterruptedException exception) {
+                    Log.e("Testing", "Interrupt occurred: " + exception);
+                }
+            }
+        }).start();
+
+    }
+
+    private void getLOcation()
+        {
+
+            locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
+
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                // TODO: Consider calling
+                //    ActivityCompat#requestPermissions
+                // here to request the missing permissions, and then overriding
+                //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                //                                          int[] grantResults)
+                // to handle the case where the user grants the permission. See the documentation
+                // for ActivityCompat#requestPermissions for more details.
+                return;
+            }
+
+            // getting GPS status
+            isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+            // getting network status
+            isNetworkEnabled = locationManager
+                    .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+            if (!isGPSEnabled && !isNetworkEnabled) {
+                // no network provider is enabled
+            }
+            else
+            {
+                if (isNetworkEnabled) {
+                    //check the network permission
+                    if (ActivityCompat.checkSelfPermission(HomeActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(HomeActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions((Activity) HomeActivity.this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 101);
+                    }
+                    locationManager.requestLocationUpdates(
+                            LocationManager.NETWORK_PROVIDER,
+                            MIN_TIME_BW_UPDATES,
+                            MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
+
+                    Log.d("Network", "Network");
+                    if (locationManager != null) {
+                        location = locationManager
+                                .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+
+                        if (location != null) {
+                            latitude = location.getLatitude();
+                            longitude = location.getLongitude();
+                        }
+                    }
+                }
+                if (isGPSEnabled){
+                    if (location == null) {
+                        //check the network permission
+                        if (ActivityCompat.checkSelfPermission(HomeActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(HomeActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                            ActivityCompat.requestPermissions((Activity) HomeActivity.this, new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 101);
+                        }
+                        locationManager.requestLocationUpdates(
+                                LocationManager.GPS_PROVIDER,
+                                MIN_TIME_BW_UPDATES,
+                                MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
+
+                        Log.d("GPS Enabled", "GPS Enabled");
+                        if (locationManager != null) {
+                            location = locationManager
+                                    .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+                            if (location != null) {
+                                latitude = location.getLatitude();
+                                longitude = location.getLongitude();
+                            }
+                        }
+                    }
+                }
+
+            }
+        }
+
+    @Override
+    public void onLocationChanged(@NonNull Location location) {
+
+    }
+
+    @Override
+    public void onProviderEnabled(@NonNull String provider) {
+
+    }
+
+    @Override
+    public void onProviderDisabled(@NonNull String provider) {
+
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+
+    }
+
+
+
+    //setup a broadcast receiver to receive the messages from the wear device via the listenerService.
+    public class MessageReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String message = intent.getStringExtra("message");
+            if(message.equals("0"))
+                check = true;
+        }
+    }
 }
