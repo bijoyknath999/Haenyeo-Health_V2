@@ -6,14 +6,18 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
+import android.os.CountDownTimer;
 import android.os.IBinder;
+import android.provider.Settings;
 import android.text.Editable;
 import android.text.method.KeyListener;
 import android.util.Log;
@@ -21,6 +25,8 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Toast;
 import androidx.core.app.NotificationCompat;
+
+import com.HHMS.models.Result;
 import com.google.android.gms.common.api.PendingResult;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.wearable.DataApi;
@@ -33,12 +39,25 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
 public class BgService extends Service implements SensorEventListener, DataClient.OnDataChangedListener {
 
 
     private SensorManager sensorService;
     private Sensor heartSensor;
     public static final String CHANNEL_ID = "ForegroundServiceChannel";
+    public int finalheartrate;
+    private SharedPreferences sharedPreferences;
+    private CountDownTimer cdt;
 
 
     // execution of service will start
@@ -62,11 +81,7 @@ public class BgService extends Service implements SensorEventListener, DataClien
                 //do heavy work on a background thread
                 //stopSelf();
                 Log.d("Bg","Bging");
-                RequestChecker requestChecker = new RequestChecker(getApplicationContext());
-                if (requestChecker.CheckingPermissionIsEnabledOrNot())
-                {
-                    getHeartRate();
-                }
+                RunTimer();
             }
             else if (intent.getAction().equals("stop")) {
                 stopall();
@@ -100,12 +115,11 @@ public class BgService extends Service implements SensorEventListener, DataClien
         }
     }
 
+
     @Override
-    // execution of the service will
-    // stop on calling this method
-    public void onDestroy() {
+    public void onTaskRemoved(Intent rootIntent) {
         stopall();
-        super.onDestroy();
+        super.onTaskRemoved(rootIntent);
     }
 
     @Override
@@ -116,9 +130,77 @@ public class BgService extends Service implements SensorEventListener, DataClien
 
     public void getHeartRate() {
         Toast.makeText(getApplicationContext(), "Loading......", Toast.LENGTH_LONG).show();
+        Log.d("Testing","Loading");
         sensorService = (SensorManager) getSystemService(SENSOR_SERVICE);
         heartSensor = sensorService.getDefaultSensor(Sensor.TYPE_HEART_RATE);
         sensorService.registerListener(this, heartSensor, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    private void RunTimer() {
+        sharedPreferences = getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
+        int time = sharedPreferences.getInt("time",0);
+
+        if (time>0)
+        {
+            int finaltime = time*1000;
+            cdt = new CountDownTimer(6000,1000) {
+                public void onTick(long millisUntilFinished) {
+                }
+                public void onFinish() {
+                    RequestChecker requestChecker = new RequestChecker(getApplicationContext());
+                    if (requestChecker.CheckingPermissionIsEnabledOrNot())
+                    {
+                        getHeartRate();
+                    }
+                    SendHeartRateServer();
+                    cdt.start();
+                }
+            };
+            cdt.start();
+        }
+    }
+
+    private void SendHeartRateServer()
+    {
+
+
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = new Date();
+
+        JSONObject data = new JSONObject();
+
+        JSONObject jobj = new JSONObject();
+        try {
+            data.put("EQ_ID",""+androidId);
+            data.put("HR_MIN", ""+0);
+            data.put("HR_MAX", ""+finalheartrate);
+            data.put("DT",""+formatter.format(date));
+            jobj.put("ID", "HR");
+            jobj.put("DATA", data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
+            @Override
+            public void onResponse(Call<Result> call, Response<Result> response) {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    if (response.body().getResult())
+                    {
+                        Log.d("Testing","Heart Sent");
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Result> call, Throwable t) {
+                Log.d("Error ",""+t.getMessage());
+            }
+        });
     }
 
 
@@ -129,7 +211,7 @@ public class BgService extends Service implements SensorEventListener, DataClien
             int heart_rate = (int) event.values[0];
 
             if (heart_rate>=40 && heart_rate<=220)
-                sendData(Integer.toString(heart_rate));
+                finalheartrate = heart_rate;
 
             Log.d("data2","->rate : "+heart_rate);
         } else {
@@ -162,12 +244,12 @@ public class BgService extends Service implements SensorEventListener, DataClien
         }
     }
 
-    void sendData(String heartrate) {
+/*    void sendData(String heartrate) {
         DataClient dataclient = Wearable.getDataClient(getApplicationContext());
         PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/Haenyeo_Health");
         putDataMapReq.getDataMap().putString("HeartRate", heartrate);
         PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
         putDataReq.setUrgent();
         Task<DataItem> putDataTask = dataclient.putDataItem(putDataReq);
-    }
+    }*/
 }

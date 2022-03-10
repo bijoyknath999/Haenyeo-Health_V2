@@ -253,7 +253,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
         });
     }
 
-    private void SendHeartRateServer(int heartrate)
+   /* private void SendHeartRateServer(int heartrate)
     {
 
 
@@ -294,7 +294,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
                 Log.d("Error ",""+t.getMessage());
             }
         });
-    }
+    }*/
 
     private void SendLocationServer()
     {
@@ -496,7 +496,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
                         progressBar.setMax(220);
                         progressBar.setMin(40);
                         progressBar.setProgress(Integer.parseInt(HeartData));
-                        SendHeartRateServer(Integer.parseInt(HeartData));
+                        //SendHeartRateServer(Integer.parseInt(HeartData));
                     }
                 }
                 else

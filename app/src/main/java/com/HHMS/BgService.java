@@ -168,7 +168,7 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
                     Log.d("Testing",""+heartrate);
                     if (heartrate>=40 && heartrate <= 220)
                     {
-                        SendHeartRateServer(Integer.parseInt(HeartData));
+                        //SendHeartRateServer(Integer.parseInt(HeartData));
                     }
                 }
                 else
@@ -209,7 +209,7 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
     }
 
 
-    private void SendHeartRateServer(int heartrate)
+    /*private void SendHeartRateServer(int heartrate)
     {
         String androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
@@ -248,7 +248,7 @@ public class BgService extends Service implements DataClient.OnDataChangedListen
                 Log.d("Testing ",""+t.getMessage());
             }
         });
-    }
+    }*/
 
     private void SendSOSServer()
     {

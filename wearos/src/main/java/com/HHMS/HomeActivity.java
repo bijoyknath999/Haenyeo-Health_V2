@@ -10,6 +10,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -22,6 +23,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.provider.Settings;
 import android.support.wearable.activity.WearableActivity;
@@ -29,8 +31,10 @@ import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -115,6 +119,14 @@ public class HomeActivity extends WearableActivity
 
     private double latitude = 0, longitude = 0;
 
+    private ImageButton Add, Remove;
+    private TextView TimerText;
+    private int timeval = 0;
+    private SharedPreferences sharedPreferences;
+    private SharedPreferences.Editor editor;
+    private CountDownTimer cdt;
+    private int finalheartrate;
+    private RequestChecker requestChecker;
 
 
 
@@ -131,12 +143,14 @@ public class HomeActivity extends WearableActivity
         HeartRateClick = findViewById(R.id.home_heart_click);
         SOS = findViewById(R.id.home_sos);
         LocationClick = findViewById(R.id.home_check_location);
+        Add = findViewById(R.id.home_timer_add);
+        Remove = findViewById(R.id.home_timer_remove);
+        TimerText = findViewById(R.id.home_timer_text);
 
-        RequestChecker requestChecker = new RequestChecker(HomeActivity.this);
-        if (requestChecker.CheckingPermissionIsEnabledOrNot())
-            getHeartRate();
-        else
-            requestChecker.RequestMultiplePermission();
+
+
+        requestChecker = new RequestChecker(HomeActivity.this);
+
 
         HeartRateClick.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -163,11 +177,173 @@ public class HomeActivity extends WearableActivity
             }
         });
 
+        sharedPreferences = getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
+        editor = sharedPreferences.edit();
+
+        timeval = sharedPreferences.getInt("time",0);
+        TimerText.setText(""+timeval+" min");
+
+
 
         // Register the local broadcast receiver
         IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SEND);
         MessageReceiver messageReceiver = new MessageReceiver();
         LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);
+
+        Add.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (timeval<5)
+                {
+                    timeval++;
+                    TimerText.setText(""+timeval+" min");
+                    editor.putInt("time",timeval);
+                    editor.commit();
+                    RunTimer();
+                }
+            }
+        });
+
+        Remove.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (timeval>1)
+                {
+                    timeval--;
+                    TimerText.setText(""+timeval+" min");
+                    editor.putInt("time",timeval);
+                    editor.commit();
+                    RunTimer();
+                }
+                else if (timeval==1)
+                {
+                    timeval--;
+                    TimerText.setText(""+timeval+" min");
+                    editor.putInt("time",timeval);
+                    editor.commit();
+                    if (cdt!=null)
+                        cdt.cancel();
+                }
+            }
+        });
+
+
+        if (timeval>0)
+            RunTimer();
+
+    }
+
+    private void RunTimer() {
+        int time = sharedPreferences.getInt("time",0);
+        int finaltime = time*60000;
+        cdt = new CountDownTimer(finaltime,1000) {
+            public void onTick(long millisUntilFinished) {
+            }
+            public void onFinish() {
+                if (requestChecker.CheckingPermissionIsEnabledOrNot())
+                    getHeartRate();
+                else
+                    requestChecker.RequestMultiplePermission();
+                SendHeartRateServer();
+                SendLocationServerAuto();
+                cdt.start();
+            }
+        };
+
+        cdt.start();
+    }
+
+    private void SendLocationServerAuto() {
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = new Date();
+
+        JSONObject data = new JSONObject();
+
+        JSONObject jobj = new JSONObject();
+        try {
+            data.put("EQ_ID",""+androidId);
+            data.put("LAT", ""+latitude);
+            data.put("LNG", ""+longitude);
+            data.put("DT",""+formatter.format(date));
+            jobj.put("ID", "LP");
+            jobj.put("DATA", data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
+            @Override
+            public void onResponse(Call<Result> call, Response<Result> response) {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    if (response.body().getResult())
+                    {
+                        Log.v("Testing","Location Sent");
+                    }
+                }
+                else
+                {
+
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Result> call, Throwable t) {
+            }
+        });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (cdt!=null)
+            cdt.cancel();
+    }
+
+    private void SendHeartRateServer()
+    {
+
+
+        String androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        Date date = new Date();
+
+        JSONObject data = new JSONObject();
+
+        JSONObject jobj = new JSONObject();
+        try {
+            data.put("EQ_ID",""+androidId);
+            data.put("HR_MIN", ""+0);
+            data.put("HR_MAX", ""+finalheartrate);
+            data.put("DT",""+formatter.format(date));
+            jobj.put("ID", "HR");
+            jobj.put("DATA", data);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
+            @Override
+            public void onResponse(Call<Result> call, Response<Result> response) {
+                if (response.isSuccessful() && response.body() != null)
+                {
+                    if (response.body().getResult())
+                    {
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Result> call, Throwable t) {
+                Log.d("Error ",""+t.getMessage());
+            }
+        });
     }
 
     private void SendSOS() {
@@ -183,7 +359,6 @@ public class HomeActivity extends WearableActivity
                     SendSOSServer();
             }
         }, 1000);
-
     }
 
     /*void SendSosData(boolean sos)
@@ -249,7 +424,8 @@ public class HomeActivity extends WearableActivity
                 animator.setDuration(60000 / heart_rate);
                 animator.start();
                 TextHearRate.setText(Integer.toString(heart_rate) +"");
-                sendData(Integer.toString(heart_rate));
+                finalheartrate = heart_rate;
+                sendData(String.valueOf(finalheartrate));
             }
         }
         else {
@@ -277,15 +453,10 @@ public class HomeActivity extends WearableActivity
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();
-        Wearable.getDataClient(this).addListener(this);
+        //Wearable.getDataClient(this).addListener(this);
         getLOcation();
         GetNode();
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Intent startIntent = new Intent(HomeActivity.this, BgService.class);
+        /*Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("stop");
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
         {
@@ -296,18 +467,15 @@ public class HomeActivity extends WearableActivity
         {
             if (foregroundServiceRunning())
                 startService(startIntent);
-        }
+        }*/
     }
+
 
     //pause listener, disconnect play services
     public void onPause(){
         super.onPause();
-        Wearable.getDataClient(this).removeListener(this);
-    }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
+        /*Wearable.getDataClient(this).removeListener(this);
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("start");
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -319,7 +487,7 @@ public class HomeActivity extends WearableActivity
         {
             if (!foregroundServiceRunning())
                 startService(startIntent);
-        }
+        }*/
     }
 
     //function triggered every time there's a data change event
