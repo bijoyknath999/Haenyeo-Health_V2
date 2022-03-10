@@ -241,7 +241,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
                 {
                     if (response.body().getResult())
                     {
-                        Log.v("Testing","SOS Sended from phone");
+                        Log.v("Testing","SOS Sent from phone");
                     }
                 }
             }
@@ -284,7 +284,7 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
                 {
                     if (response.body().getResult())
                     {
-                        Log.v("Testing","HeartRate Sended");
+                        Log.v("Testing","HeartRate Sent");
                     }
                 }
             }
@@ -305,8 +305,6 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
         Date date = new Date();
-
-        Log.d("Testing",""+gpsTracker.getLatitude());
 
         JSONObject data = new JSONObject();
 
@@ -330,9 +328,8 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
                 {
                     if (response.body().getResult())
                     {
-                        Log.v("Testing","Location Sended from phone");
+                        Log.v("Testing","Location Sent from phone");
                     }
-                    Log.v("Testing","loc"+response.body().getData().getMsg());
                     startActivity(new Intent(HomeActivity.this, MapsActivity.class));
                 }
                 else

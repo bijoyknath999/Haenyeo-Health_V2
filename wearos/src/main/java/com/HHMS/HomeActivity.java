@@ -280,7 +280,11 @@ public class HomeActivity extends WearableActivity
         Wearable.getDataClient(this).addListener(this);
         getLOcation();
         GetNode();
+    }
 
+    @Override
+    protected void onStart() {
+        super.onStart();
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("stop");
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -299,7 +303,11 @@ public class HomeActivity extends WearableActivity
     public void onPause(){
         super.onPause();
         Wearable.getDataClient(this).removeListener(this);
+    }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
         Intent startIntent = new Intent(HomeActivity.this, BgService.class);
         startIntent.setAction("start");
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
@@ -313,7 +321,6 @@ public class HomeActivity extends WearableActivity
                 startService(startIntent);
         }
     }
-
 
     //function triggered every time there's a data change event
     public void onDataChanged(DataEventBuffer dataEvents) {
@@ -356,8 +363,6 @@ public class HomeActivity extends WearableActivity
         }
 
 
-        Log.d("Testing",""+jobj.toString());
-
         ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
             @Override
             public void onResponse(Call<Result> call, Response<Result> response) {
@@ -365,7 +370,7 @@ public class HomeActivity extends WearableActivity
                 {
                     if (response.body().getResult())
                     {
-                        Log.v("Testing","SOS Sended");
+                        Log.v("Testing","SOS Sent");
                         Toast.makeText(HomeActivity.this, "SOS Send Successfully!!", Toast.LENGTH_SHORT).show();
                     }
                     else
@@ -417,7 +422,10 @@ public class HomeActivity extends WearableActivity
             public void onResponse(Call<Result> call, Response<Result> response) {
                 if (response.isSuccessful() && response.body() != null)
                 {
-                    Log.v("Testing","Location Sended");
+                    if (response.body().getResult())
+                    {
+                        Log.v("Testing","Location Sent");
+                    }
                     startActivity(new Intent(HomeActivity.this, MapsActivity.class));
                 }
                 else

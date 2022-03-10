@@ -4,6 +4,8 @@ import androidx.fragment.app.FragmentActivity;
 
 import android.location.Geocoder;
 import android.os.Bundle;
+import android.widget.Toast;
+
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -44,6 +46,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if (gpsTracker!=null) {
             latitude = gpsTracker.getLatitude();
             longitude = gpsTracker.getLongitude();
+        }
+        else
+        {
+            Toast.makeText(MapsActivity.this, "Failed to get your location, Please reopen.", Toast.LENGTH_SHORT).show();
         }
 
         //it will get user current location full address
