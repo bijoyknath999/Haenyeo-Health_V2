@@ -216,6 +216,8 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
 
     private void SendSOSServer()
     {
+        GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
+
         String androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
@@ -227,6 +229,8 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
         JSONObject jobj = new JSONObject();
         try {
             data.put("EQ_ID",""+androidId);
+            data.put("LAT", ""+gpsTracker.getLatitude());
+            data.put("LNG", ""+gpsTracker.getLongitude());
             data.put("DT",""+formatter.format(date));
             jobj.put("ID", "SO");
             jobj.put("DATA", data);

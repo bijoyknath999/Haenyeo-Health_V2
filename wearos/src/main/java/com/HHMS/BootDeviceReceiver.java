@@ -16,7 +16,7 @@ public class BootDeviceReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
         String message = "BootDeviceReceiver onReceive, action is " + action;
-        Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+        //Toast.makeText(context, message, Toast.LENGTH_LONG).show();
         Log.d(TAG_BOOT_BROADCAST_RECEIVER, action);
         if(Intent.ACTION_BOOT_COMPLETED.equals(action))
         {
@@ -29,7 +29,7 @@ public class BootDeviceReceiver extends BroadcastReceiver {
     {
         Intent serviceIntent = new Intent(context, BgService.class);
         serviceIntent.setAction("start");
-        ContextCompat.startForegroundService(context, serviceIntent );
+        //ContextCompat.startForegroundService(context, serviceIntent );
     }
 
     /* Create an repeat Alarm that will invoke the background service for each execution time.

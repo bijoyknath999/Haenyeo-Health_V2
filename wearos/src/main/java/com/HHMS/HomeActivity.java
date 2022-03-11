@@ -127,6 +127,7 @@ public class HomeActivity extends WearableActivity
     private CountDownTimer cdt;
     private int finalheartrate;
     private RequestChecker requestChecker;
+    private Button CheckSSAID;
 
 
 
@@ -146,6 +147,7 @@ public class HomeActivity extends WearableActivity
         Add = findViewById(R.id.home_timer_add);
         Remove = findViewById(R.id.home_timer_remove);
         TimerText = findViewById(R.id.home_timer_text);
+        CheckSSAID = findViewById(R.id.home_ssaid);
 
 
 
@@ -224,6 +226,16 @@ public class HomeActivity extends WearableActivity
                     if (cdt!=null)
                         cdt.cancel();
                 }
+            }
+        });
+
+
+        CheckSSAID.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String androidId = Settings.Secure.getString(getContentResolver(),
+                        Settings.Secure.ANDROID_ID);
+                Toast.makeText(HomeActivity.this, "SSAID : "+androidId, Toast.LENGTH_LONG).show();
             }
         });
 
@@ -523,6 +535,8 @@ public class HomeActivity extends WearableActivity
         JSONObject jobj = new JSONObject();
         try {
             data.put("EQ_ID",""+androidId);
+            data.put("LAT", ""+latitude);
+            data.put("LNG", ""+longitude);
             data.put("DT",""+formatter.format(date));
             jobj.put("ID", "SO");
             jobj.put("DATA", data);
@@ -544,6 +558,8 @@ public class HomeActivity extends WearableActivity
                     else
                     {
                         Toast.makeText(getApplicationContext(), "Error :"+response.body().getData().getMsg(), Toast.LENGTH_SHORT).show();
+                        Log.d("Testing ",""+response.body().getData().getMsg());
+
                     }
                 }
                 else
@@ -559,7 +575,6 @@ public class HomeActivity extends WearableActivity
             }
         });
     }
-
 
     private void SendLocationServer()
     {
