@@ -128,6 +128,7 @@ public class HomeActivity extends WearableActivity
     private int finalheartrate;
     private RequestChecker requestChecker;
     private Button CheckSSAID;
+    private boolean IsRunning = false;
 
 
 
@@ -223,8 +224,10 @@ public class HomeActivity extends WearableActivity
                     TimerText.setText(""+timeval+" min");
                     editor.putInt("time",timeval);
                     editor.commit();
-                    if (cdt!=null)
+                    if (cdt!=null) {
                         cdt.cancel();
+                        IsRunning = false;
+                    }
                 }
             }
         });
@@ -250,8 +253,11 @@ public class HomeActivity extends WearableActivity
         int finaltime = time*60000;
         cdt = new CountDownTimer(finaltime,1000) {
             public void onTick(long millisUntilFinished) {
+                IsRunning = true;
             }
             public void onFinish() {
+                IsRunning = false;
+
                 if (requestChecker.CheckingPermissionIsEnabledOrNot())
                     getHeartRate();
                 else
@@ -347,13 +353,22 @@ public class HomeActivity extends WearableActivity
                 {
                     if (response.body().getResult())
                     {
+                        Log.v("Testing","Heart Rate Sent");
                     }
+                    else
+                    {
+                        Log.v("Testing"," "+response.body().getData().getMsg());
+                    }
+                }
+                else
+                {
+                    Log.v("Testing"," "+response.errorBody());
                 }
             }
 
             @Override
             public void onFailure(Call<Result> call, Throwable t) {
-                Log.d("Error ",""+t.getMessage());
+                Log.d("Testing ",""+t.getMessage());
             }
         });
     }
@@ -438,6 +453,8 @@ public class HomeActivity extends WearableActivity
                 TextHearRate.setText(Integer.toString(heart_rate) +"");
                 finalheartrate = heart_rate;
                 sendData(String.valueOf(finalheartrate));
+                if(!IsRunning)
+                    SendHeartRateServer();
             }
         }
         else {
@@ -452,7 +469,7 @@ public class HomeActivity extends WearableActivity
     }
 
 
-    public boolean foregroundServiceRunning(){
+    /*public boolean foregroundServiceRunning(){
         ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
         for(ActivityManager.RunningServiceInfo service: activityManager.getRunningServices(Integer.MAX_VALUE)) {
             if(BgService.class.getName().equals(service.service.getClassName())) {
@@ -461,7 +478,7 @@ public class HomeActivity extends WearableActivity
         }
         return false;
     }
-
+*/
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();

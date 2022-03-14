@@ -129,7 +129,7 @@ public class BgService extends Service implements SensorEventListener, DataClien
     }
 
     public void getHeartRate() {
-        Toast.makeText(getApplicationContext(), "Loading......", Toast.LENGTH_LONG).show();
+        //Toast.makeText(getApplicationContext(), "Loading......", Toast.LENGTH_LONG).show();
         Log.d("Testing","Loading");
         sensorService = (SensorManager) getSystemService(SENSOR_SERVICE);
         heartSensor = sensorService.getDefaultSensor(Sensor.TYPE_HEART_RATE);
