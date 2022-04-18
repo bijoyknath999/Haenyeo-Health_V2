@@ -1,20 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.HHMS" >
-
+    package="com.HHMS">
     <!-- Always include this permission -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.BODY_SENSORS" />
-    <!--<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />-->
-
+    <uses-permission android:name="android.permission.BODY_SENSORS" /> <!-- <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" /> -->
     <uses-feature android:name="android.hardware.type.watch" />
 
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <!--<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />-->
 
     <application
         android:allowBackup="true"
@@ -23,7 +19,10 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault"
         android:usesCleartextTraffic="true">
-
+        <activity
+            android:name=".UniversalActivity"
+            android:exported="false"
+            android:theme="@style/Theme.HHMS" />
         <!--
              TODO: Before you run your application, you need a Google Maps API key.
 
@@ -43,32 +42,33 @@
             android:name=".MapsActivity"
             android:exported="false"
             android:label="@string/title_activity_maps"
-            android:theme="@style/Theme.HHMS"/>
+            android:theme="@style/Theme.HHMS" />
         <activity
             android:name=".SplashActivity"
             android:exported="true"
-            android:theme="@style/Theme.HHMS" >
+            android:theme="@style/Theme.HHMS">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!--<service
+        <!--
+<service
             android:name=".BgService"
             android:enabled="true"
-            android:exported="true" />-->
-
-        <!--<receiver
+            android:exported="true" />
+        -->
+        <!--
+<receiver
             android:name=".BootDeviceReceiver"
             android:enabled="true"
             android:exported="true" >
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
-        </receiver>-->
-
+        </receiver>
+        -->
         <activity android:name=".MainActivity" />
 
         <uses-library
@@ -88,21 +88,23 @@
         <activity
             android:name=".HomeActivity"
             android:exported="true"
-            android:label="@string/app_name" >
-        </activity>
-
+            android:label="@string/app_name"></activity>
 
         <service
             android:name=".ListenerService"
             android:enabled="true"
-            android:exported="true" >
+            android:exported="true">
             <intent-filter>
-                <!--action android:name="com.google.android.gms.wearable.DATA_CHANGED" /-->
+
+                <!-- action android:name="com.google.android.gms.wearable.DATA_CHANGED" / -->
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
-                <data android:scheme="wear" android:host="*" android:pathPrefix="/message_path" />
+
+                <data
+                    android:host="*"
+                    android:pathPrefix="/message_path"
+                    android:scheme="wear" />
             </intent-filter>
         </service>
-
     </application>
 
 </manifest>

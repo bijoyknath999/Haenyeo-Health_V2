@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.wear.widget.BoxInsetLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="@dimen/box_inset_layout_padding"
+    tools:context=".UniversalActivity"
+    tools:deviceIds="wear"
+    android:background="@color/color8"
+    android:id="@+id/universal_layout_bg">
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_gravity="center">
+
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="SSAID :"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:gravity="center"
+            android:textSize="14sp"
+            android:fontFamily="@font/quicksand_bold"
+            android:textColor="@color/black"/>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/universal_ssaid_text"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="5dp"
+            android:text=""
+            android:gravity="center"
+            android:textSize="14sp"
+            android:fontFamily="@font/quicksand_medium"
+            android:textColor="@color/black"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="gone"
+            android:id="@+id/universal_layout_1">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="DriverID :"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="5dp"
+                android:gravity="center"
+                android:textSize="14sp"
+                android:fontFamily="@font/quicksand_bold"
+                android:textColor="@color/black"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/universal_driverid_text"
+                android:layout_marginTop="5dp"
+                android:layout_marginBottom="5dp"
+                android:text="Not Ready"
+                android:gravity="center"
+                android:textSize="14sp"
+                android:fontFamily="@font/quicksand_medium"
+                android:textColor="@color/black"/>
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:id="@+id/universal_start_btn"
+                android:layout_marginTop="5dp"
+                android:visibility="gone"
+                android:layout_marginBottom="5dp"
+                android:layout_gravity="center"
+                android:text="Start"
+                android:gravity="center"
+                android:textSize="11sp"
+                android:textColor="@color/white"
+                android:textAllCaps="false"
+                android:fontFamily="@font/quicksand_medium"
+                android:background="@drawable/custom_layout3"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp"
+                android:paddingLeft="20dp"
+                android:paddingRight="20dp"/>
+
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:id="@+id/universal_layout_2">
+            <androidx.appcompat.widget.AppCompatButton
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:gravity="center"
+                android:id="@+id/universal_registration_btn"
+                android:layout_marginTop="10dp"
+                android:textColor="@color/white"
+                android:textAllCaps="false"
+                android:layout_marginBottom="5dp"
+                android:layout_gravity="center"
+                android:text="Registration"
+                android:textSize="11sp"
+                android:fontFamily="@font/quicksand_medium"
+                android:background="@drawable/custom_layout3"
+                android:paddingTop="5dp"
+                android:paddingBottom="5dp"
+                android:paddingLeft="10dp"
+                android:paddingRight="10dp"/>
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/universal_processing_text"
+                android:visibility="gone"
+                android:layout_marginBottom="5dp"
+                android:text="Processing...."
+                android:gravity="center"
+                android:textSize="12sp"
+                android:fontFamily="@font/quicksand"
+                android:textColor="@color/black"/>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</androidx.wear.widget.BoxInsetLayout>
