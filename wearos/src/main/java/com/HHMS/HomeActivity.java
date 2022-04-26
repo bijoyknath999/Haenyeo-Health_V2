@@ -72,6 +72,13 @@ import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
 
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.MqttCallback;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -88,7 +95,7 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class HomeActivity extends WearableActivity
-        implements SensorEventListener, DataClient.OnDataChangedListener, LocationListener {
+        implements SensorEventListener, DataClient.OnDataChangedListener, LocationListener, MqttCallback {
 
     TextView TextHearRate;
     ImageView ImgHeart;
@@ -129,6 +136,19 @@ public class HomeActivity extends WearableActivity
     private RequestChecker requestChecker;
     private Button CheckSSAID;
     private boolean IsRunning = false;
+    private String androidId, driveID = "";
+
+
+    private final String serverUrl   = "tcp://220.118.147.52:7883";
+    private final String clientId    = "RW_WATCH_01";
+    private String message2;  // example data
+    //final String tenant      = "<<tenant_ID>>";
+    private final String username    = "rwit";
+    private final String password    = "5be70721a1a11eae0280ef87b0c29df5aef7f248";
+    private final String topic = "RW/JD/HD"; //  RW/JD/DI TODO chanag!!!!
+    private final String topic2 = "RW/JD/DS"; //  RW/JD/DI TODO chanag!!!!
+    private MqttClient mqttClient;
+    private MqttConnectOptions mqttConnectOptions;
 
 
 
@@ -149,6 +169,8 @@ public class HomeActivity extends WearableActivity
         Remove = findViewById(R.id.home_timer_remove);
         TimerText = findViewById(R.id.home_timer_text);
         CheckSSAID = findViewById(R.id.home_ssaid);
+
+        driveID = sharedPreferences.getString("diverid","");
 
 
 
@@ -242,15 +264,40 @@ public class HomeActivity extends WearableActivity
             }
         });
 
+        if (requestChecker.CheckingPermissionIsEnabledOrNot())
+            getHeartRate();
+        else
+            requestChecker.RequestMultiplePermission();
 
-        if (timeval>0)
             RunTimer();
 
+
+
+        androidId = Settings.Secure.getString(getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+        
+        message2 = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+driveID+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || 1648099351515";
+
+        mqttConnectOptions = new MqttConnectOptions();
+        mqttConnectOptions.setCleanSession(true);
+        mqttConnectOptions.setKeepAliveInterval(1000);
+        mqttConnectOptions.setAutomaticReconnect(true);
+        mqttConnectOptions.setConnectionTimeout(1000);
+        mqttConnectOptions.setUserName(username);
+        mqttConnectOptions.setPassword(password.toCharArray());
+
+        try {
+            mqttClient = new MqttClient(serverUrl, clientId, new MemoryPersistence());
+            mqttClient.setCallback(this);
+            mqttClient.connect(mqttConnectOptions);
+            mqttClient.subscribe(topic);
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
     }
 
     private void RunTimer() {
-        int time = sharedPreferences.getInt("time",0);
-        int finaltime = time*60000;
+        int finaltime = 1*60000;
         cdt = new CountDownTimer(finaltime,1000) {
             public void onTick(long millisUntilFinished) {
                 IsRunning = true;
@@ -258,12 +305,28 @@ public class HomeActivity extends WearableActivity
             public void onFinish() {
                 IsRunning = false;
 
-                if (requestChecker.CheckingPermissionIsEnabledOrNot())
-                    getHeartRate();
-                else
-                    requestChecker.RequestMultiplePermission();
-                SendHeartRateServer();
-                SendLocationServerAuto();
+                try {
+
+                    if (!mqttClient.isConnected()) {
+                        mqttClient.connect();
+                    }
+
+                    if (mqttClient.isConnected())
+                    {
+                        System.out.println("Sending message...");
+                        mqttClient.publish(topic, message2.getBytes(), 0, false);
+                        System.out.println("Sending done...");
+                    }
+                    else
+                        System.out.println("Failed To Send.......");
+
+
+                } catch (MqttException e) {
+                    e.printStackTrace();
+                }
+
+               /* SendHeartRateServer();
+                SendLocationServerAuto();*/
                 cdt.start();
             }
         };
@@ -482,6 +545,9 @@ public class HomeActivity extends WearableActivity
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();
+        
+        if (driveID.isEmpty())
+            Toast.makeText(this, "Empty", Toast.LENGTH_SHORT).show();
         //Wearable.getDataClient(this).addListener(this);
         getLOcation();
         GetNode();
@@ -810,6 +876,41 @@ public class HomeActivity extends WearableActivity
             String message = intent.getStringExtra("message");
             if(message.equals("0"))
                 check = true;
+        }
+    }
+
+
+
+    @Override
+    public void connectionLost(Throwable cause) {
+        System.out.println("Connection lost! " + cause.getMessage());
+        if (!mqttClient.isConnected()) {
+            try {
+                mqttClient.connect();
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    @Override
+    public void messageArrived(String topic, MqttMessage message) throws Exception {
+        System.out.println("topic :"+topic);
+        System.out.println("message :"+message);
+        String messageStr = String.valueOf(message);
+        String messageStr2 = messageStr.substring(messageStr.indexOf("HNID || ")+8);
+        String firstWord = messageStr2.replaceAll(" ", "*");
+        driveID = firstWord.substring(0, firstWord.indexOf("*^"));
+    }
+
+    @Override
+    public void deliveryComplete(IMqttDeliveryToken token) {
+        try {
+            System.out.println("Pub complete" + new String(token.getMessage().getPayload()));
+        } catch (MqttException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
     }
 }

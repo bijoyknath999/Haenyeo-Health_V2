@@ -111,20 +111,6 @@ public class HomeActivity extends AppCompatActivity implements DataClient.OnData
         MainLayout = findViewById(R.id.home_layout);
         sharedPreferences = getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
 
-        MQTT_PUB2.main();
-        RwMqttClient mqttClient1 = new RwMqttClient();
-        mqttClient1.init();
-
-
-        Log.d("Testing", ""+mqttClient1.isConnected());
-        try {
-            mqttClient1.connect();
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
-
-        Log.d("Testing2", ""+mqttClient1.isConnected());
-
         Calendar c = Calendar.getInstance();
         int timeOfDay = c.get(Calendar.HOUR_OF_DAY);
 
