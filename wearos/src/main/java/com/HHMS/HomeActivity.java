@@ -27,6 +27,7 @@ import android.os.CountDownTimer;
 import android.os.Handler;
 import android.provider.Settings;
 import android.support.wearable.activity.WearableActivity;
+import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -82,9 +83,12 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.security.Timestamp;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -136,19 +140,20 @@ public class HomeActivity extends WearableActivity
     private RequestChecker requestChecker;
     private Button CheckSSAID;
     private boolean IsRunning = false;
-    private String androidId, driveID = "";
+    private String androidId, diverID = "";
 
 
     private final String serverUrl   = "tcp://220.118.147.52:7883";
     private final String clientId    = "RW_WATCH_01";
-    private String message2;  // example data
+    private String message2, message3;  // example data
     //final String tenant      = "<<tenant_ID>>";
     private final String username    = "rwit";
     private final String password    = "5be70721a1a11eae0280ef87b0c29df5aef7f248";
-    private final String topic = "RW/JD/HD"; //  RW/JD/DI TODO chanag!!!!
-    private final String topic2 = "RW/JD/DS"; //  RW/JD/DI TODO chanag!!!!
+    private final String topic1 = "RW/JD/HD"; //  RW/JD/DI TODO chanag!!!!
+    private final String topic2 = "RW/JD/ES"; //  RW/JD/DI TODO chanag!!!!
     private MqttClient mqttClient;
     private MqttConnectOptions mqttConnectOptions;
+    private Timestamp timestamp;
 
 
 
@@ -170,9 +175,8 @@ public class HomeActivity extends WearableActivity
         TimerText = findViewById(R.id.home_timer_text);
         CheckSSAID = findViewById(R.id.home_ssaid);
 
-        driveID = sharedPreferences.getString("diverid","");
-
-
+        sharedPreferences = getSharedPreferences("hhmsdata",MODE_PRIVATE);
+        diverID = sharedPreferences.getString("diverid","");
 
         requestChecker = new RequestChecker(HomeActivity.this);
 
@@ -275,8 +279,6 @@ public class HomeActivity extends WearableActivity
 
         androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
-        
-        message2 = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+driveID+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || 1648099351515";
 
         mqttConnectOptions = new MqttConnectOptions();
         mqttConnectOptions.setCleanSession(true);
@@ -290,13 +292,22 @@ public class HomeActivity extends WearableActivity
             mqttClient = new MqttClient(serverUrl, clientId, new MemoryPersistence());
             mqttClient.setCallback(this);
             mqttClient.connect(mqttConnectOptions);
-            mqttClient.subscribe(topic);
+            mqttClient.subscribe(topic1,0);
+            mqttClient.subscribe(topic2,0);
         } catch (MqttException e) {
             e.printStackTrace();
         }
     }
 
+    public static String getCurrentTimestamp() {
+        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Calendar
+                .getInstance().getTime());
+    }
+
     private void RunTimer() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        String currentDateandTime = sdf.format(new Date());
+
         int finaltime = 1*60000;
         cdt = new CountDownTimer(finaltime,1000) {
             public void onTick(long millisUntilFinished) {
@@ -304,8 +315,10 @@ public class HomeActivity extends WearableActivity
             }
             public void onFinish() {
                 IsRunning = false;
-
                 try {
+                    getLOcation();
+                    if (latitude!=0.0)
+                        message2 = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+diverID+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+currentDateandTime;
 
                     if (!mqttClient.isConnected()) {
                         mqttClient.connect();
@@ -314,7 +327,7 @@ public class HomeActivity extends WearableActivity
                     if (mqttClient.isConnected())
                     {
                         System.out.println("Sending message...");
-                        mqttClient.publish(topic, message2.getBytes(), 0, false);
+                        mqttClient.publish(topic1, message2.getBytes(), 0, false);
                         System.out.println("Sending done...");
                     }
                     else
@@ -438,7 +451,7 @@ public class HomeActivity extends WearableActivity
 
     private void SendSOS() {
 
-        GetNode();
+        /*GetNode();
         final Handler handler = new Handler();
         handler.postDelayed(new Runnable() {
             @Override
@@ -448,7 +461,37 @@ public class HomeActivity extends WearableActivity
                 else
                     SendSOSServer();
             }
-        }, 1000);
+        }, 1000);*/
+
+
+        GetNode();
+
+        try {
+            getLOcation();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            String currentDateandTime = sdf.format(new Date());
+
+            if (latitude!=0.0)
+                message3 = "ID || ES ^^ EQID || "+androidId+" ^^ HNID || "+diverID+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
+
+            if (!mqttClient.isConnected()) {
+                mqttClient.connect();
+            }
+
+            if (mqttClient.isConnected())
+            {
+                System.out.println("Sending message...");
+                mqttClient.publish(topic2, message3.getBytes(), 0, false);
+                System.out.println("Sending done...");
+                Toast.makeText(HomeActivity.this, "SOS Successful!!", Toast.LENGTH_SHORT).show();
+            }
+            else
+                System.out.println("Failed To Send.......");
+
+
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
     }
 
     /*void SendSosData(boolean sos)
@@ -546,7 +589,7 @@ public class HomeActivity extends WearableActivity
     public void onResume(){
         super.onResume();
         
-        if (driveID.isEmpty())
+        if (diverID.isEmpty())
             Toast.makeText(this, "Empty", Toast.LENGTH_SHORT).show();
         //Wearable.getDataClient(this).addListener(this);
         getLOcation();
@@ -605,7 +648,7 @@ public class HomeActivity extends WearableActivity
 
 
 
-    private void SendSOSServer()
+    /*private void SendSOSServer()
     {
         String androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
@@ -657,12 +700,12 @@ public class HomeActivity extends WearableActivity
                 Log.d("Testing ",""+t.getMessage());
             }
         });
-    }
+    }*/
 
     private void SendLocationServer()
     {
 
-        String androidId = Settings.Secure.getString(getContentResolver(),
+        /*String androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
@@ -705,7 +748,32 @@ public class HomeActivity extends WearableActivity
             public void onFailure(Call<Result> call, Throwable t) {
                 startActivity(new Intent(HomeActivity.this, MapsActivity.class));
             }
-        });
+        });*/
+
+
+        try {
+            getLOcation();
+            if (latitude!=0.0)
+                message2 = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+diverID+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
+
+            if (!mqttClient.isConnected()) {
+                mqttClient.connect();
+            }
+
+            if (mqttClient.isConnected())
+            {
+                System.out.println("Sending message...");
+                mqttClient.publish(topic1, message2.getBytes(), 0, false);
+                System.out.println("Sending done...");
+            }
+            else
+                System.out.println("Failed To Send.......");
+
+
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+
     }
 
 
@@ -901,7 +969,7 @@ public class HomeActivity extends WearableActivity
         String messageStr = String.valueOf(message);
         String messageStr2 = messageStr.substring(messageStr.indexOf("HNID || ")+8);
         String firstWord = messageStr2.replaceAll(" ", "*");
-        driveID = firstWord.substring(0, firstWord.indexOf("*^"));
+        diverID = firstWord.substring(0, firstWord.indexOf("*^"));
     }
 
     @Override

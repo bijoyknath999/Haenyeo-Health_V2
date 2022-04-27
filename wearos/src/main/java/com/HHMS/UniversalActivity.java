@@ -159,7 +159,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
     @Override
     public void connectionLost(Throwable cause) {
-        System.out.println("Connection lost! " + cause.getMessage());
+        System.out.println("Connection lost 2! " + cause.getMessage());
         if (!mqttClient.isConnected()) {
             try {
                 mqttClient.connect();
@@ -184,6 +184,48 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             String firstWord = messageStr2.replaceAll(" ", "*");
             diverid = firstWord.substring(0, firstWord.indexOf("*^"));
         }
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (mqttClient.isConnected()) {
+            try {
+                mqttClient.disconnect();
+                mqttClient.close();
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (mqttClient.isConnected()) {
+            try {
+                mqttClient.disconnect();
+                mqttClient.close();
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (mqttClient.isConnected()) {
+            try {
+                mqttClient.disconnect();
+                mqttClient.close();
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
 
     private void CheckDriverID() {
