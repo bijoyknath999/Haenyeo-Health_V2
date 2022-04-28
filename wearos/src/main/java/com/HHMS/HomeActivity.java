@@ -40,39 +40,19 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
-import com.HHMS.models.Result;
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.PendingResult;
-import com.google.android.gms.common.api.ResultCallback;
-import com.google.android.gms.common.api.Status;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.SuccessContinuation;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.google.android.gms.wearable.CapabilityApi;
-import com.google.android.gms.wearable.CapabilityClient;
-import com.google.android.gms.wearable.CapabilityInfo;
 import com.google.android.gms.wearable.DataClient;
 import com.google.android.gms.wearable.DataEvent;
 import com.google.android.gms.wearable.DataEventBuffer;
 import com.google.android.gms.wearable.DataItem;
 import com.google.android.gms.wearable.DataMapItem;
-import com.google.android.gms.wearable.MessageApi;
-import com.google.android.gms.wearable.MessageClient;
-import com.google.android.gms.wearable.MessageOptions;
 import com.google.android.gms.wearable.Node;
-import com.google.android.gms.wearable.NodeApi;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
-
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -80,23 +60,9 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.security.Timestamp;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
-import java.util.Locale;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
-import kotlin.ResultKt;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 public class HomeActivity extends WearableActivity
         implements SensorEventListener, DataClient.OnDataChangedListener, LocationListener, MqttCallback {
@@ -106,9 +72,9 @@ public class HomeActivity extends WearableActivity
     private ObjectAnimator animator;
     private SensorManager sensorService;
     private Sensor heartSensor;
-    private LinearLayout HeartRateClick, LocationClick;
+    private LinearLayout HeartRateClick;
     public static int i = 0;
-    private LinearLayout SOS;
+    private Button Stop, SOS;
 
     String datapath = "/message_path";
     String message = "0";
@@ -129,18 +95,11 @@ public class HomeActivity extends WearableActivity
     boolean isNetworkEnabled = false;
 
     private double latitude = 0, longitude = 0;
-
-    private ImageButton Add, Remove;
-    private TextView TimerText;
-    private int timeval = 0;
-    private SharedPreferences sharedPreferences;
-    private SharedPreferences.Editor editor;
     private CountDownTimer cdt;
     private int finalheartrate;
     private RequestChecker requestChecker;
-    private Button CheckSSAID;
-    private boolean IsRunning = false;
     private String androidId, diverID = "";
+    private int finaldiverid, datasend;
 
 
     private final String serverUrl   = "tcp://220.118.147.52:7883";
@@ -153,7 +112,6 @@ public class HomeActivity extends WearableActivity
     private final String topic2 = "RW/JD/ES"; //  RW/JD/DI TODO chanag!!!!
     private MqttClient mqttClient;
     private MqttConnectOptions mqttConnectOptions;
-    private Timestamp timestamp;
 
 
 
@@ -169,15 +127,9 @@ public class HomeActivity extends WearableActivity
         ImgHeart = findViewById(R.id.image_heart);
         HeartRateClick = findViewById(R.id.home_heart_click);
         SOS = findViewById(R.id.home_sos);
-        LocationClick = findViewById(R.id.home_check_location);
-        Add = findViewById(R.id.home_timer_add);
-        Remove = findViewById(R.id.home_timer_remove);
-        TimerText = findViewById(R.id.home_timer_text);
-        CheckSSAID = findViewById(R.id.home_ssaid);
+        Stop = findViewById(R.id.home_stop);
 
-        sharedPreferences = getSharedPreferences("hhmsdata",MODE_PRIVATE);
-        diverID = sharedPreferences.getString("diverid","");
-
+        finaldiverid = Tools.getID("diverid", HomeActivity.this);
         requestChecker = new RequestChecker(HomeActivity.this);
 
 
@@ -199,83 +151,20 @@ public class HomeActivity extends WearableActivity
             }
         });
 
-        LocationClick.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                SendLocationServer();
-            }
-        });
-
-        sharedPreferences = getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
-        editor = sharedPreferences.edit();
-
-        timeval = sharedPreferences.getInt("time",0);
-        TimerText.setText(""+timeval+" min");
-
-
-
         // Register the local broadcast receiver
         IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SEND);
         MessageReceiver messageReceiver = new MessageReceiver();
         LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);
 
-        Add.setOnClickListener(new View.OnClickListener() {
+
+        Stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (timeval<5)
-                {
-                    timeval++;
-                    TimerText.setText(""+timeval+" min");
-                    editor.putInt("time",timeval);
-                    editor.commit();
-                    RunTimer();
-                }
+                Tools.saveID("datasend",0,HomeActivity.this);
+                startActivity(new Intent(HomeActivity.this, UniversalActivity.class));
+                finish();
             }
         });
-
-        Remove.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (timeval>1)
-                {
-                    timeval--;
-                    TimerText.setText(""+timeval+" min");
-                    editor.putInt("time",timeval);
-                    editor.commit();
-                    RunTimer();
-                }
-                else if (timeval==1)
-                {
-                    timeval--;
-                    TimerText.setText(""+timeval+" min");
-                    editor.putInt("time",timeval);
-                    editor.commit();
-                    if (cdt!=null) {
-                        cdt.cancel();
-                        IsRunning = false;
-                    }
-                }
-            }
-        });
-
-
-        CheckSSAID.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String androidId = Settings.Secure.getString(getContentResolver(),
-                        Settings.Secure.ANDROID_ID);
-                Toast.makeText(HomeActivity.this, "SSAID : "+androidId, Toast.LENGTH_LONG).show();
-            }
-        });
-
-        if (requestChecker.CheckingPermissionIsEnabledOrNot())
-            getHeartRate();
-        else
-            requestChecker.RequestMultiplePermission();
-
-            RunTimer();
-
-
 
         androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
@@ -300,25 +189,22 @@ public class HomeActivity extends WearableActivity
     }
 
     public static String getCurrentTimestamp() {
-        return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Calendar
-                .getInstance().getTime());
+        Date date = new Date();
+        //This method returns the time in millis
+        long timeMilli = date.getTime();
+        return String.valueOf(timeMilli);
     }
 
     private void RunTimer() {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        String currentDateandTime = sdf.format(new Date());
-
         int finaltime = 1*60000;
         cdt = new CountDownTimer(finaltime,1000) {
             public void onTick(long millisUntilFinished) {
-                IsRunning = true;
             }
             public void onFinish() {
-                IsRunning = false;
                 try {
                     getLOcation();
                     if (latitude!=0.0)
-                        message2 = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+diverID+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+currentDateandTime;
+                        message2 = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
 
                     if (!mqttClient.isConnected()) {
                         mqttClient.connect();
@@ -338,141 +224,45 @@ public class HomeActivity extends WearableActivity
                     e.printStackTrace();
                 }
 
-               /* SendHeartRateServer();
-                SendLocationServerAuto();*/
-                cdt.start();
+                datasend = Tools.getID("datasend", HomeActivity.this);
+                if (datasend == 1)
+                    cdt.start();
             }
         };
 
         cdt.start();
     }
 
-    private void SendLocationServerAuto() {
-        String androidId = Settings.Secure.getString(getContentResolver(),
-                Settings.Secure.ANDROID_ID);
-
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-        Date date = new Date();
-
-        JSONObject data = new JSONObject();
-
-        JSONObject jobj = new JSONObject();
-        try {
-            data.put("EQ_ID",""+androidId);
-            data.put("LAT", ""+latitude);
-            data.put("LNG", ""+longitude);
-            data.put("DT",""+formatter.format(date));
-            jobj.put("ID", "LP");
-            jobj.put("DATA", data);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
 
 
-        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
-            @Override
-            public void onResponse(Call<Result> call, Response<Result> response) {
-                if (response.isSuccessful() && response.body() != null)
-                {
-                    if (response.body().getResult())
-                    {
-                        Log.v("Testing","Location Sent");
-                    }
-                }
-                else
-                {
-
-                }
-            }
-
-            @Override
-            public void onFailure(Call<Result> call, Throwable t) {
-            }
-        });
-    }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
         if (cdt!=null)
             cdt.cancel();
-    }
 
-    private void SendHeartRateServer()
-    {
-
-
-        String androidId = Settings.Secure.getString(getContentResolver(),
-                Settings.Secure.ANDROID_ID);
-
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-        Date date = new Date();
-
-        JSONObject data = new JSONObject();
-
-        JSONObject jobj = new JSONObject();
-        try {
-            data.put("EQ_ID",""+androidId);
-            data.put("HR_MIN", ""+0);
-            data.put("HR_MAX", ""+finalheartrate);
-            data.put("DT",""+formatter.format(date));
-            jobj.put("ID", "HR");
-            jobj.put("DATA", data);
-        } catch (JSONException e) {
-            e.printStackTrace();
+        if (mqttClient.isConnected()) {
+            try {
+                mqttClient.disconnect();
+                mqttClient.close();
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
         }
 
-        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
-            @Override
-            public void onResponse(Call<Result> call, Response<Result> response) {
-                if (response.isSuccessful() && response.body() != null)
-                {
-                    if (response.body().getResult())
-                    {
-                        Log.v("Testing","Heart Rate Sent");
-                    }
-                    else
-                    {
-                        Log.v("Testing"," "+response.body().getData().getMsg());
-                    }
-                }
-                else
-                {
-                    Log.v("Testing"," "+response.errorBody());
-                }
-            }
-
-            @Override
-            public void onFailure(Call<Result> call, Throwable t) {
-                Log.d("Testing ",""+t.getMessage());
-            }
-        });
     }
 
     private void SendSOS() {
-
-        /*GetNode();
-        final Handler handler = new Handler();
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (check)
-                    Toast.makeText(HomeActivity.this, "SOS Successful!!", Toast.LENGTH_SHORT).show();
-                else
-                    SendSOSServer();
-            }
-        }, 1000);*/
-
 
         GetNode();
 
         try {
             getLOcation();
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-            String currentDateandTime = sdf.format(new Date());
 
             if (latitude!=0.0)
-                message3 = "ID || ES ^^ EQID || "+androidId+" ^^ HNID || "+diverID+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
+                message3 = "ID || ES ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
 
             if (!mqttClient.isConnected()) {
                 mqttClient.connect();
@@ -493,33 +283,6 @@ public class HomeActivity extends WearableActivity
             e.printStackTrace();
         }
     }
-
-    /*void SendSosData(boolean sos)
-    {
-        DataClient dataclient = Wearable.getDataClient(getApplicationContext());
-        GpsTracker gpsTracker = new GpsTracker(HomeActivity.this);
-        double lat = gpsTracker.getLatitude();
-        double lon = gpsTracker.getLongitude();
-        PutDataMapRequest putDataMapReq = PutDataMapRequest.create("/Haenyeo_Health");
-        putDataMapReq.getDataMap().putString("HeartRate", "0");
-        putDataMapReq.getDataMap().putDouble("lat", lat);
-        putDataMapReq.getDataMap().putDouble("lon", lon);
-        putDataMapReq.getDataMap().putBoolean("sos", sos);
-        PutDataRequest putDataReq = putDataMapReq.asPutDataRequest();
-        putDataReq.setUrgent();
-        Task<DataItem> putDataTask = dataclient.putDataItem(putDataReq);
-
-        putDataTask.addOnSuccessListener(new OnSuccessListener<DataItem>() {
-            @Override
-            public void onSuccess(DataItem dataItem) {
-                Toast.makeText(HomeActivity.this, " Connected", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-
-
-    }*/
-
 
     void sendData(String heartrate) {
 
@@ -559,8 +322,6 @@ public class HomeActivity extends WearableActivity
                 TextHearRate.setText(Integer.toString(heart_rate) +"");
                 finalheartrate = heart_rate;
                 sendData(String.valueOf(finalheartrate));
-                if(!IsRunning)
-                    SendHeartRateServer();
             }
         }
         else {
@@ -574,59 +335,30 @@ public class HomeActivity extends WearableActivity
 
     }
 
-
-    /*public boolean foregroundServiceRunning(){
-        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for(ActivityManager.RunningServiceInfo service: activityManager.getRunningServices(Integer.MAX_VALUE)) {
-            if(BgService.class.getName().equals(service.service.getClassName())) {
-                return true;
-            }
-        }
-        return false;
-    }
-*/
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();
-        
-        if (diverID.isEmpty())
-            Toast.makeText(this, "Empty", Toast.LENGTH_SHORT).show();
-        //Wearable.getDataClient(this).addListener(this);
+        if (!mqttClient.isConnected()) {
+            try {
+                mqttClient.connect();
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+        LoadFunc();
         getLOcation();
         GetNode();
-        /*Intent startIntent = new Intent(HomeActivity.this, BgService.class);
-        startIntent.setAction("stop");
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-        {
-            if (foregroundServiceRunning())
-                startForegroundService(startIntent);
-        }
-        else
-        {
-            if (foregroundServiceRunning())
-                startService(startIntent);
-        }*/
     }
 
-
-    //pause listener, disconnect play services
-    public void onPause(){
-        super.onPause();
-
-        /*Wearable.getDataClient(this).removeListener(this);
-        Intent startIntent = new Intent(HomeActivity.this, BgService.class);
-        startIntent.setAction("start");
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-        {
-            if (!foregroundServiceRunning())
-                startForegroundService(startIntent);
-        }
+    private void LoadFunc() {
+        if (requestChecker.CheckingPermissionIsEnabledOrNot())
+            getHeartRate();
         else
-        {
-            if (!foregroundServiceRunning())
-                startService(startIntent);
-        }*/
+            requestChecker.RequestMultiplePermission();
+
+        RunTimer();
     }
+
 
     //function triggered every time there's a data change event
     public void onDataChanged(DataEventBuffer dataEvents) {
@@ -645,138 +377,6 @@ public class HomeActivity extends WearableActivity
             }
         }
     }
-
-
-
-    /*private void SendSOSServer()
-    {
-        String androidId = Settings.Secure.getString(getContentResolver(),
-                Settings.Secure.ANDROID_ID);
-
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-        Date date = new Date();
-
-        JSONObject data = new JSONObject();
-
-        JSONObject jobj = new JSONObject();
-        try {
-            data.put("EQ_ID",""+androidId);
-            data.put("LAT", ""+latitude);
-            data.put("LNG", ""+longitude);
-            data.put("DT",""+formatter.format(date));
-            jobj.put("ID", "SO");
-            jobj.put("DATA", data);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-
-        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
-            @Override
-            public void onResponse(Call<Result> call, Response<Result> response) {
-                if (response.isSuccessful() && response.body() != null)
-                {
-                    if (response.body().getResult())
-                    {
-                        Log.v("Testing","SOS Sent");
-                        Toast.makeText(HomeActivity.this, "SOS Send Successfully!!", Toast.LENGTH_SHORT).show();
-                    }
-                    else
-                    {
-                        Toast.makeText(getApplicationContext(), "Error :"+response.body().getData().getMsg(), Toast.LENGTH_SHORT).show();
-                        Log.d("Testing ",""+response.body().getData().getMsg());
-
-                    }
-                }
-                else
-                {
-                    Toast.makeText(getApplicationContext(), "SOS Signal failed send!!", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<Result> call, Throwable t) {
-                Toast.makeText(getApplicationContext(), "Error :"+t.getMessage(), Toast.LENGTH_SHORT).show();
-                Log.d("Testing ",""+t.getMessage());
-            }
-        });
-    }*/
-
-    private void SendLocationServer()
-    {
-
-        /*String androidId = Settings.Secure.getString(getContentResolver(),
-                Settings.Secure.ANDROID_ID);
-
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
-        Date date = new Date();
-
-        JSONObject data = new JSONObject();
-
-        JSONObject jobj = new JSONObject();
-        try {
-            data.put("EQ_ID",""+androidId);
-            data.put("LAT", ""+latitude);
-            data.put("LNG", ""+longitude);
-            data.put("DT",""+formatter.format(date));
-            jobj.put("ID", "LP");
-            jobj.put("DATA", data);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-
-        ApiInterface.getRequestApiInterface().sendData(jobj.toString()).enqueue(new Callback<Result>() {
-            @Override
-            public void onResponse(Call<Result> call, Response<Result> response) {
-                if (response.isSuccessful() && response.body() != null)
-                {
-                    if (response.body().getResult())
-                    {
-                        Log.v("Testing","Location Sent");
-                    }
-                    startActivity(new Intent(HomeActivity.this, MapsActivity.class));
-                }
-                else
-                {
-                    startActivity(new Intent(HomeActivity.this, MapsActivity.class));
-
-                }
-            }
-
-            @Override
-            public void onFailure(Call<Result> call, Throwable t) {
-                startActivity(new Intent(HomeActivity.this, MapsActivity.class));
-            }
-        });*/
-
-
-        try {
-            getLOcation();
-            if (latitude!=0.0)
-                message2 = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+diverID+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
-
-            if (!mqttClient.isConnected()) {
-                mqttClient.connect();
-            }
-
-            if (mqttClient.isConnected())
-            {
-                System.out.println("Sending message...");
-                mqttClient.publish(topic1, message2.getBytes(), 0, false);
-                System.out.println("Sending done...");
-            }
-            else
-                System.out.println("Failed To Send.......");
-
-
-        } catch (MqttException e) {
-            e.printStackTrace();
-        }
-
-    }
-
-
     private void GetNode()
     {
         check = false;
@@ -935,8 +535,6 @@ public class HomeActivity extends WearableActivity
 
     }
 
-
-
     //setup a broadcast receiver to receive the messages from the wear device via the listenerService.
     public class MessageReceiver extends BroadcastReceiver {
         @Override
@@ -946,8 +544,6 @@ public class HomeActivity extends WearableActivity
                 check = true;
         }
     }
-
-
 
     @Override
     public void connectionLost(Throwable cause) {
@@ -970,6 +566,7 @@ public class HomeActivity extends WearableActivity
         String messageStr2 = messageStr.substring(messageStr.indexOf("HNID || ")+8);
         String firstWord = messageStr2.replaceAll(" ", "*");
         diverID = firstWord.substring(0, firstWord.indexOf("*^"));
+        //finaldiverid = Integer.parseInt(diverID);
     }
 
     @Override

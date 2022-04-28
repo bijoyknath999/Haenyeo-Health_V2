@@ -39,11 +39,6 @@
             android:value="@string/map_key" />
 
         <activity
-            android:name=".MapsActivity"
-            android:exported="false"
-            android:label="@string/title_activity_maps"
-            android:theme="@style/Theme.HHMS" />
-        <activity
             android:name=".SplashActivity"
             android:exported="true"
             android:theme="@style/Theme.HHMS">
@@ -53,23 +48,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <!--
-<service
-            android:name=".BgService"
-            android:enabled="true"
-            android:exported="true" />
-        -->
-        <!--
-<receiver
-            android:name=".BootDeviceReceiver"
-            android:enabled="true"
-            android:exported="true" >
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-        -->
-        <activity android:name=".MainActivity" />
 
         <uses-library
             android:name="com.google.android.wearable"

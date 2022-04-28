@@ -39,6 +39,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     private AppCompatButton RegBtn, StartBn;
     private String androidId, diverid = "0";
 
+    private int finaldiverid, SaveID;
+
     private final String serverUrl   = "tcp://220.118.147.52:7883";
     private final String clientId    = "RW_WATCH_01";
     private String message;  // example data
@@ -50,8 +52,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     private MqttClient mqttClient;
     private MqttConnectOptions mqttConnectOptions;
     private CountDownTimer cdt;
-    private SharedPreferences sharedPreferences;
-    private SharedPreferences.Editor editor;
 
 
     @Override
@@ -69,11 +69,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         LayoutBg = findViewById(R.id.universal_layout_bg);
         Layout1 = findViewById(R.id.universal_layout_1);
         Layout2 = findViewById(R.id.universal_layout_2);
-
-
-        sharedPreferences = getSharedPreferences("hhmsdata",MODE_PRIVATE);
-        editor = sharedPreferences.edit();
-
 
         androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
@@ -104,8 +99,9 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         StartBn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                String diveid_ = sharedPreferences.getString("diverid","");
-                if (!diveid_.isEmpty()) {
+                int diveid_ = Tools.getID("diverid",UniversalActivity.this);
+                if (diveid_ > 0) {
+                     Tools.saveID("datasend", 1, UniversalActivity.this);
                     startActivity(new Intent(UniversalActivity.this, HomeActivity.class));
                     finish();
                 }
@@ -143,6 +139,19 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
                 }
             }
         });
+
+    }
+
+    private void LoadFunc() {
+        SaveID = Tools.getID("diverid",UniversalActivity.this);
+        if (SaveID>0)
+        {
+            LayoutBg.setBackgroundColor(getResources().getColor(R.color.color10));
+            Layout1.setVisibility(View.VISIBLE);
+            Layout2.setVisibility(View.GONE);
+            DiverID.setText(""+SaveID);
+            StartBn.setVisibility(View.VISIBLE);
+        }
 
         cdt = new CountDownTimer(3000,1000) {
             public void onTick(long millisUntilFinished) {
@@ -183,40 +192,30 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             String messageStr2 = messageStr.substring(messageStr.indexOf("HNID || ")+8);
             String firstWord = messageStr2.replaceAll(" ", "*");
             diverid = firstWord.substring(0, firstWord.indexOf("*^"));
+            Tools.saveID("diverid", Integer.parseInt(diverid), UniversalActivity.this);
         }
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        if (mqttClient.isConnected()) {
+    protected void onResume() {
+        super.onResume();
+        if (!mqttClient.isConnected()) {
             try {
-                mqttClient.disconnect();
-                mqttClient.close();
+                mqttClient.connect();
             } catch (MqttException e) {
                 e.printStackTrace();
             }
         }
-
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (mqttClient.isConnected()) {
-            try {
-                mqttClient.disconnect();
-                mqttClient.close();
-            } catch (MqttException e) {
-                e.printStackTrace();
-            }
-        }
-
+        LoadFunc();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        if (cdt!=null)
+            cdt.cancel();
+
         if (mqttClient.isConnected()) {
             try {
                 mqttClient.disconnect();
@@ -232,17 +231,18 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
         System.out.println(""+diverid);
 
-        if (!diverid.equals("-1") && !diverid.equals("0"))
+        finaldiverid = Tools.getID("diverid",UniversalActivity.this);
+
+        if (finaldiverid>0)
         {
-            editor.putString("diverid",diverid);
-            editor.commit();
+            Tools.saveID("diverid", finaldiverid, UniversalActivity.this);
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color10));
             Layout1.setVisibility(View.VISIBLE);
             Layout2.setVisibility(View.GONE);
-            DiverID.setText(""+diverid);
+            DiverID.setText(""+finaldiverid);
             StartBn.setVisibility(View.VISIBLE);
         }
-        else if (diverid.equals("0"))
+        else if (finaldiverid == 0)
         {
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color8));
             Layout1.setVisibility(View.GONE);

@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="color1">#76a5ee</color>
     <color name="color2">#FF512F</color>
-    <color name="color3">#DD2476</color>
     <color name="color4">#00c6ff</color>
     <color name="color5">#0072ff</color>
     <color name="color6">#FF512F</color>
@@ -10,7 +8,6 @@
     <color name="color8">#D3D3D3</color>
     <color name="color9">#FFFF00</color>
     <color name="color10">#00FF00</color>
-    <color name="color11">#FF0000</color>
     <color name="primary">#79b84e</color>
 
 

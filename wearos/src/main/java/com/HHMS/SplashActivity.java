@@ -10,6 +10,7 @@ public class SplashActivity extends AppCompatActivity {
 
     private static final int SPLASH_DURATION = 2000;
     private BoxInsetLayout rootLayout;
+    private int diverid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -17,6 +18,8 @@ public class SplashActivity extends AppCompatActivity {
         setContentView(R.layout.activity_splash);
 
         rootLayout = findViewById(R.id.splashScreen);
+
+        diverid = Tools.getID("diverid",SplashActivity.this);
     }
 
     private void initFunctionality() {
@@ -26,7 +29,6 @@ public class SplashActivity extends AppCompatActivity {
                 Intent intent = new Intent(SplashActivity.this, UniversalActivity.class);
                 startActivity(intent);
                 finish();
-
             }
         }, SPLASH_DURATION);
     }

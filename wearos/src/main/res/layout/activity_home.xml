@@ -7,7 +7,7 @@
     android:padding="@dimen/box_inset_layout_padding"
     tools:context=".HomeActivity"
     tools:deviceIds="wear"
-    android:background="@color/color6">
+    android:background="@color/color10">
 
     <ScrollView
         android:layout_width="match_parent"
@@ -20,15 +20,16 @@
             android:layout_gravity="center">
 
             <Button
-                android:layout_width="50dp"
-                android:layout_height="20dp"
-                android:text="SSAID"
-                android:textSize="12sp"
-                android:layout_marginTop="5dp"
-                android:layout_gravity="center_horizontal"
-                android:textColor="@color/color6"
-                android:id="@+id/home_ssaid"
-                android:background="@drawable/custom_layout2"/>
+                android:layout_width="80dp"
+                android:layout_height="30dp"
+                android:id="@+id/home_stop"
+                android:text="Stop"
+                android:layout_gravity="center"
+                android:layout_marginBottom="10dp"
+                android:textSize="14sp"
+                android:textAllCaps="false"
+                android:background="@drawable/custom_card2"/>
+
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -91,120 +92,18 @@
                         android:textSize="12sp" />
 
                 </LinearLayout>
-
-                <!--<Button
-                    android:layout_width="130dp"
-                    android:layout_height="35dp"
-                    android:text="Blood Pressure"
-                    android:layout_gravity="center"
-                    android:layout_marginTop="10dp"
-                    android:textSize="14sp"
-                    android:textAllCaps="false"
-                    android:background="@drawable/custom_card2"/>-->
-
             </LinearLayout>
 
-            <View
-                android:layout_width="40dp"
-                android:layout_height="2dp"
+            <Button
+                android:layout_width="80dp"
+                android:layout_height="30dp"
+                android:id="@+id/home_sos"
+                android:text="SOS"
                 android:layout_gravity="center"
-                android:background="@color/white"
-                android:layout_marginBottom="5dp"/>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginLeft="5dp">
-
-                <LinearLayout
-                    android:layout_width="70dp"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:gravity="center"
-                    android:id="@+id/home_sos">
-                    <ImageView
-                        android:layout_width="60dp"
-                        android:layout_height="60dp"
-                        android:padding="15dp"
-                        android:background="@drawable/ic_progress_circle"
-                        android:src="@drawable/ic_sos"
-                        android:layout_gravity="center"/>
-                </LinearLayout>
-
-                <View
-                    android:layout_width="2dp"
-                    android:layout_height="50dp"
-                    android:layout_gravity="center"
-                    android:background="@color/white"
-                    android:layout_margin="5dp"/>
-
-                <LinearLayout
-                    android:layout_width="70dp"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginLeft="5dp"
-                    android:id="@+id/home_check_location">
-                    <ImageView
-                        android:layout_width="35dp"
-                        android:layout_height="35dp"
-                        android:src="@drawable/ic_my_location"
-                        android:layout_gravity="center"/>
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Check Location"
-                        android:textSize="10sp"/>
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-
-            <View
-                android:layout_width="40dp"
-                android:layout_height="2dp"
-                android:layout_gravity="center"
-                android:background="@color/white"
-                android:layout_marginTop="5dp"
-                android:layout_marginBottom="5dp"/>
-
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:visibility="gone"
-                android:background="@drawable/custom_layout2"
-                android:padding="5dp">
-
-                <ImageButton
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_add"
-                    android:id="@+id/home_timer_add"
-                    android:layout_marginRight="5dp"
-                    android:background="@drawable/custom_btn4" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:id="@+id/home_timer_text"
-                    android:fontFamily="@font/quicksand_bold"
-                    android:text="0 min"
-                    android:textColor="@color/black"
-                    android:textSize="12sp"/>
-                <ImageButton
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:id="@+id/home_timer_remove"
-                    android:src="@drawable/ic_remove"
-                    android:layout_marginLeft="5dp"
-                    android:background="@drawable/custom_btn4"/>
-
-            </LinearLayout>
+                android:layout_marginTop="10dp"
+                android:textSize="14sp"
+                android:textAllCaps="false"
+                android:background="@drawable/custom_card3"/>
 
         </LinearLayout>
     </ScrollView>
