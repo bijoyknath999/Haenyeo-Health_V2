@@ -1,4 +1,4 @@
-package com.jejudiver;
+package com.rockwonitglobal.jejudiver;
 
 import static android.Manifest.permission.ACCESS_COARSE_LOCATION;
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
