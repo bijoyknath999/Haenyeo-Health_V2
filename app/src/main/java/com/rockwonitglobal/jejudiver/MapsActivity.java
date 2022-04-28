@@ -1,4 +1,4 @@
-package com.HHMS;
+package com.rockwonitglobal.jejudiver;
 
 import androidx.fragment.app.FragmentActivity;
 

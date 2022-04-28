@@ -1,4 +1,4 @@
-package com.HHMS;
+package com.rockwonitglobal.jejudiver;
 
 import android.content.Context;
 import android.content.SharedPreferences;

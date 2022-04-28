@@ -1,4 +1,4 @@
-package com.HHMS;
+package com.rockwonitglobal.jejudiver;
 
 import android.Manifest;
 import android.app.Activity;

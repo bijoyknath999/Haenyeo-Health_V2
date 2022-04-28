@@ -1,4 +1,4 @@
-package com.HHMS;
+package com.rockwonitglobal.jejudiver;
 
 import com.HHMS.models.Model;
 import com.HHMS.models.Result;

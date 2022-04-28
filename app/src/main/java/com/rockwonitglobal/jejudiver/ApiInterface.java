@@ -1,4 +1,4 @@
-package com.HHMS;
+package com.rockwonitglobal.jejudiver;
 
 import okhttp3.OkHttpClient;
 import retrofit2.Retrofit;

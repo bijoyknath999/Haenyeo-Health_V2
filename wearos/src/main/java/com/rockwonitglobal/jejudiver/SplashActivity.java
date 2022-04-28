@@ -1,10 +1,11 @@
-package com.HHMS;
+package com.rockwonitglobal.jejudiver;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.wear.widget.BoxInsetLayout;
 
 import android.content.Intent;
 import android.os.Bundle;
+
 
 public class SplashActivity extends AppCompatActivity {
 
