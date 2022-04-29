@@ -99,6 +99,7 @@ public class HomeActivity extends WearableActivity
     //final String tenant      = "<<tenant_ID>>";
     private final String username    = "rwit";
     private final String password    = "5be70721a1a11eae0280ef87b0c29df5aef7f248";
+    private final String[] topic= {"RW/JD/HD","RW/JD/ES"};
     private final String topic1 = "RW/JD/HD"; //  RW/JD/DI TODO chanag!!!!
     private final String topic2 = "RW/JD/ES"; //  RW/JD/DI TODO chanag!!!!
     private MqttClient mqttClient;
