@@ -20,7 +20,7 @@
         android:theme="@android:style/Theme.DeviceDefault"
         android:usesCleartextTraffic="true">
         <activity
-            android:name="com.jejudiver.UniversalActivity"
+            android:name="com.rockwonitglobal.jejudiver.UniversalActivity"
             android:exported="false"
             android:theme="@style/Theme.HHMS" />
         <!--
@@ -39,7 +39,7 @@
             android:value="@string/map_key" />
 
         <activity
-            android:name="com.jejudiver.SplashActivity"
+            android:name="com.rockwonitglobal.jejudiver.SplashActivity"
             android:exported="true"
             android:theme="@style/Theme.HHMS">
             <intent-filter>
@@ -64,12 +64,12 @@
             android:resource="@array/preloaded_fonts" />
 
         <activity
-            android:name="com.jejudiver.HomeActivity"
+            android:name="com.rockwonitglobal.jejudiver.HomeActivity"
             android:exported="true"
             android:label="@string/app_name"></activity>
 
         <service
-            android:name="com.jejudiver.ListenerService"
+            android:name="com.rockwonitglobal.jejudiver.ListenerService"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
