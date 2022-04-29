@@ -40,6 +40,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     //final String tenant      = "<<tenant_ID>>";
     private final String username    = "rwit";
     private final String password    = "5be70721a1a11eae0280ef87b0c29df5aef7f248";
+    private final String[] topic = {"RW/JD/DS","RW/JD/DI"};
     private final String topic1 = "RW/JD/DI"; //  RW/JD/DI TODO chanag!!!!
     private final String topic2 = "RW/JD/DS"; //  RW/JD/DI TODO chanag!!!!
     private MqttClient mqttClient;
@@ -82,8 +83,9 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             mqttClient = new MqttClient(serverUrl, clientId, new MemoryPersistence());
             mqttClient.setCallback(this);
             mqttClient.connect(mqttConnectOptions);
-            mqttClient.subscribe(topic1,0);
-            mqttClient.subscribe(topic2,0);
+//            mqttClient.subscribe(topic1,0);
+//            mqttClient.subscribe(topic2,0);
+            mqttClient.subscribe(topic);
         } catch (MqttException e) {
             e.printStackTrace();
         }
@@ -94,7 +96,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             public void onClick(View view) {
                 int diveid_ = Tools.getID("diverid",UniversalActivity.this);
                 if (diveid_ > 0) {
-                     Tools.saveID("datasend", 1, UniversalActivity.this);
+                    Tools.saveID("datasend", 1, UniversalActivity.this);
                     startActivity(new Intent(UniversalActivity.this, HomeActivity.class));
                     finish();
                 }
