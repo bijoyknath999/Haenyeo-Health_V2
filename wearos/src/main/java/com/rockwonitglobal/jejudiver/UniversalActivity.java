@@ -22,6 +22,8 @@ import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
+import java.util.Date;
+
 public class UniversalActivity extends AppCompatActivity implements MqttCallback {
 
     private TextView SSAIDTEXT, PROCESSINGTEXT,DiverID;
@@ -66,7 +68,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
         SSAIDTEXT.setText(""+androidId);
 
-        message = "ID || DI ^^ EQID || "+androidId+" ^^ TS || 1648099351515";
+        message = "ID || DI ^^ EQID || "+androidId+" ^^ TS || "+getCurrentTimestamp();
 
         mqttConnectOptions = new MqttConnectOptions();
         mqttConnectOptions.setCleanSession(true);
@@ -155,6 +157,14 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         };
 
         cdt.start();
+    }
+
+
+    public static String getCurrentTimestamp() {
+        Date date = new Date();
+        //This method returns the time in millis
+        long timeMilli = date.getTime();
+        return String.valueOf(timeMilli);
     }
 
     @Override
