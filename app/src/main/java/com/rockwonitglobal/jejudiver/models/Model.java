@@ -1,4 +1,4 @@
-package com.HHMS.models;
+package com.rockwonitglobal.jejudiver.models;
 
 import java.util.ArrayList;
 

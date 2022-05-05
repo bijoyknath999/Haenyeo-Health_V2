@@ -51,6 +51,8 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -181,9 +183,10 @@ public class HomeActivity extends WearableActivity
     }
 
     public static String getCurrentTimestamp() {
-        Date date = new Date();
-        //This method returns the time in millis
-        long timeMilli = date.getTime();
+        //creating Calendar instance
+        Calendar calendar = Calendar.getInstance();
+        //Returns current time in millis
+        long timeMilli = calendar.getTimeInMillis();
         return String.valueOf(timeMilli);
     }
 
@@ -193,39 +196,42 @@ public class HomeActivity extends WearableActivity
             public void onTick(long millisUntilFinished) {
             }
             public void onFinish() {
-                try {
-                    getLOcation();
-                    if (latitude!=0.0)
-                        message2 = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
-
-                    if (!mqttClient.isConnected()) {
-                        mqttClient.connect();
-                    }
-
-                    if (mqttClient.isConnected())
-                    {
-                        System.out.println("Sending message...");
-                        mqttClient.publish(topic1, message2.getBytes(), 0, false);
-                        System.out.println("Sending done...");
-                    }
-                    else
-                        System.out.println("Failed To Send.......");
-
-
-                } catch (MqttException e) {
-                    e.printStackTrace();
-                }
-
-                datasend = Tools.getID("datasend", HomeActivity.this);
-                if (datasend == 1)
-                    cdt.start();
+                PublishData();
             }
         };
 
         cdt.start();
     }
 
+    private void PublishData() {
+        try {
+            getLOcation();
+            if (latitude!=0.0)
+                message2 = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
 
+            if (!mqttClient.isConnected()) {
+                mqttClient.connect();
+            }
+
+            if (mqttClient.isConnected())
+            {
+                System.out.println("Sending message...");
+                mqttClient.publish(topic1, message2.getBytes(), 0, false);
+                System.out.println("Sending done...");
+            }
+            else
+                System.out.println("Failed To Send.......");
+
+
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+
+        datasend = Tools.getID("datasend", HomeActivity.this);
+        if (datasend == 1)
+            if (cdt!=null)
+                cdt.start();
+    }
 
 
     @Override

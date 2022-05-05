@@ -1,5 +1,6 @@
 package com.rockwonitglobal.jejudiver;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.AppCompatButton;
 import androidx.wear.widget.BoxInsetLayout;
@@ -7,7 +8,10 @@ import androidx.wear.widget.BoxInsetLayout;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
+import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -21,10 +25,18 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import com.samsung.android.service.health.tracking.ConnectionListener;
+import com.samsung.android.service.health.tracking.HealthTracker;
+import com.samsung.android.service.health.tracking.HealthTrackerException;
+import com.samsung.android.service.health.tracking.HealthTrackingService;
+import com.samsung.android.service.health.tracking.data.DataPoint;
+import com.samsung.android.service.health.tracking.data.HealthTrackerType;
+import com.samsung.android.service.health.tracking.data.ValueKey;
 
 import java.util.Date;
+import java.util.List;
 
-public class UniversalActivity extends AppCompatActivity implements MqttCallback {
+public class UniversalActivity extends AppCompatActivity implements MqttCallback, ConnectionListener {
 
     private TextView SSAIDTEXT, PROCESSINGTEXT,DiverID;
     private LinearLayout Layout1, Layout2;
@@ -46,6 +58,13 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     private MqttClient mqttClient;
     private MqttConnectOptions mqttConnectOptions;
     private CountDownTimer cdt;
+    private HealthTracker spo2Tracker = null;
+    private HealthTrackingService healthTrackingService = null;
+    private final Handler handler = new Handler(Looper.myLooper());
+
+    private String TAG = "Test";
+
+
 
 
     @Override
@@ -135,6 +154,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             }
         });
 
+
+        healthTrackingService = new HealthTrackingService(this, getApplicationContext());
     }
 
     private void LoadFunc() {
@@ -171,7 +192,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
     @Override
     public void connectionLost(Throwable cause) {
-        System.out.println("Connection lost 2! " + cause.getMessage());
+        //System.out.println("Connection lost 2! " + cause.getMessage());
         if (!mqttClient.isConnected()) {
             try {
                 mqttClient.connect();
@@ -202,6 +223,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     @Override
     protected void onResume() {
         super.onResume();
+        healthTrackingService.connectService();
         if (!mqttClient.isConnected()) {
             try {
                 mqttClient.connect();
@@ -271,4 +293,79 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             e.printStackTrace();
         }
     }
+
+    @Override
+    public void onConnectionSuccess() {
+
+        Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
+
+        try {
+            spo2Tracker = healthTrackingService.getHealthTracker(HealthTrackerType.SPO2);
+        } catch (final IllegalArgumentException e) {
+            runOnUiThread(() -> Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show()
+            );
+            finish();
+        }
+    }
+
+    @Override
+    public void onConnectionEnded() {
+        Toast.makeText(this, "Ended!!", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onConnectionFailed(HealthTrackerException e) {
+
+        Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
+
+    }
+
+    private final HealthTracker.TrackerEventListener trackerEventListener = new HealthTracker.TrackerEventListener() {
+        @Override
+        public void onDataReceived(@NonNull List<DataPoint> list) {
+            if (list.size() != 0) {
+                Log.i(TAG, "List Size : "+list.size());
+                for(DataPoint dataPoint : list) {
+                    int status = dataPoint.getValue(ValueKey.SpO2Set.STATUS);
+                    Log.i(TAG, "Status : " + status);
+                    runOnUiThread(() -> {
+                        if (status == 2) {
+                            if(spo2Tracker != null) {
+                                spo2Tracker.unsetEventListener();
+                            }
+                            handler.removeCallbacksAndMessages(null);
+                        }
+                        else if (status == 0) {
+                        }
+                        else if (status == -4){
+                            Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
+                        }
+                        else {
+                            Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            } else {
+                Log.i(TAG, "onDataReceived List is zero");
+            }
+        }
+
+        @Override
+        public void onFlushCompleted() {
+            Log.i(TAG, " onFlushCompleted called");
+        }
+
+        @Override
+        public void onError(HealthTracker.TrackerError trackerError) {
+            Log.i(TAG, " onError called");
+            if (trackerError == HealthTracker.TrackerError.PERMISSION_ERROR) {
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(),
+                        "Permissions Check Failed", Toast.LENGTH_SHORT).show());
+            }
+            if (trackerError == HealthTracker.TrackerError.SDK_POLICY_ERROR) {
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(),
+                        "SDK Policy denied", Toast.LENGTH_SHORT).show());
+            }
+        }
+    };
 }

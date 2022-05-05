@@ -1,7 +1,7 @@
 package com.rockwonitglobal.jejudiver;
 
-import com.HHMS.models.Model;
-import com.HHMS.models.Result;
+import com.rockwonitglobal.jejudiver.models.Model;
+import com.rockwonitglobal.jejudiver.models.Result;
 
 import retrofit2.Call;
 import retrofit2.http.Field;
