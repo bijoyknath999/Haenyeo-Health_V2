@@ -65,8 +65,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     private String TAG = "Test";
 
 
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -115,6 +113,12 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             public void onClick(View view) {
                 int diveid_ = Tools.getID("diverid",UniversalActivity.this);
                 if (diveid_ > 0) {
+                    try {
+                        mqttClient.disconnect();
+                        mqttClient.close();
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
                     Tools.saveID("datasend", 1, UniversalActivity.this);
                     startActivity(new Intent(UniversalActivity.this, HomeActivity.class));
                     finish();
@@ -297,7 +301,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     @Override
     public void onConnectionSuccess() {
 
-        Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
 
         try {
             spo2Tracker = healthTrackingService.getHealthTracker(HealthTrackerType.SPO2);
@@ -316,7 +320,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     @Override
     public void onConnectionFailed(HealthTrackerException e) {
 
-        Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
 
     }
 

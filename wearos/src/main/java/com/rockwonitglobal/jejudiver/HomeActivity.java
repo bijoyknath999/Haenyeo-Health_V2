@@ -19,6 +19,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.CountDownTimer;
+import android.os.Handler;
 import android.provider.Settings;
 import android.support.wearable.activity.WearableActivity;
 import android.util.Log;
@@ -107,6 +108,10 @@ public class HomeActivity extends WearableActivity
     private MqttClient mqttClient;
     private MqttConnectOptions mqttConnectOptions;
 
+    Handler handler = new Handler();
+    Runnable runnable;
+    int delay = 60000;
+
 
 
 
@@ -191,19 +196,20 @@ public class HomeActivity extends WearableActivity
     }
 
     private void RunTimer() {
-        int finaltime = 1*60000;
-        cdt = new CountDownTimer(finaltime,1000) {
-            public void onTick(long millisUntilFinished) {
-            }
-            public void onFinish() {
+        handler.postDelayed(runnable = new Runnable() {
+            public void run() {
+                handler.postDelayed(runnable, delay);
                 PublishData();
-            }
-        };
+                Toast.makeText(HomeActivity.this, "This method is run every 1 min",
+                        Toast.LENGTH_SHORT).show();
 
-        cdt.start();
+            }
+        }, delay);
     }
 
     private void PublishData() {
+        System.out.println("This method is run every 1 min");
+
         try {
             getLOcation();
             if (latitude!=0.0)
