@@ -36,12 +36,11 @@ import com.samsung.android.service.health.tracking.data.ValueKey;
 import java.util.Date;
 import java.util.List;
 
-public class UniversalActivity extends AppCompatActivity implements MqttCallback, ConnectionListener {
+public class UniversalActivity extends AppCompatActivity implements MqttCallback {
 
-    private TextView SSAIDTEXT, PROCESSINGTEXT,DiverID;
-    private LinearLayout Layout1, Layout2;
+    private TextView SSAIDTEXT,DiverID;
     private BoxInsetLayout LayoutBg;
-    private AppCompatButton RegBtn, StartBn;
+    private AppCompatButton StartBn;
     private String androidId, diverid = "0";
 
     private int finaldiverid, SaveID;
@@ -52,15 +51,10 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     //final String tenant      = "<<tenant_ID>>";
     private final String username    = "rwit";
     private final String password    = "5be70721a1a11eae0280ef87b0c29df5aef7f248";
-    private final String[] topic = {"RW/JD/DS","RW/JD/DI"};
-    private final String topic1 = "RW/JD/DI"; //  RW/JD/DI TODO chanag!!!!
     private final String topic2 = "RW/JD/DS"; //  RW/JD/DI TODO chanag!!!!
     private MqttClient mqttClient;
     private MqttConnectOptions mqttConnectOptions;
     private CountDownTimer cdt;
-    private HealthTracker spo2Tracker = null;
-    private HealthTrackingService healthTrackingService = null;
-    private final Handler handler = new Handler(Looper.myLooper());
 
     private String TAG = "Test";
 
@@ -71,22 +65,18 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         setContentView(R.layout.activity_universal);
 
         SSAIDTEXT = findViewById(R.id.universal_ssaid_text);
-        PROCESSINGTEXT = findViewById(R.id.universal_processing_text);
-        RegBtn = findViewById(R.id.universal_registration_btn);
         DiverID = findViewById(R.id.universal_diverid_text);
         StartBn = findViewById(R.id.universal_start_btn);
 
 
         LayoutBg = findViewById(R.id.universal_layout_bg);
-        Layout1 = findViewById(R.id.universal_layout_1);
-        Layout2 = findViewById(R.id.universal_layout_2);
 
         androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
 
         SSAIDTEXT.setText(""+androidId);
 
-        message = "ID || DI ^^ EQID || "+androidId+" ^^ TS || "+getCurrentTimestamp();
+        message = "ID || DS ^^ EQID || "+androidId+" ^^ HNID || -1 ^^ TS || "+getCurrentTimestamp();
 
         mqttConnectOptions = new MqttConnectOptions();
         mqttConnectOptions.setCleanSession(true);
@@ -100,12 +90,20 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             mqttClient = new MqttClient(serverUrl, clientId, new MemoryPersistence());
             mqttClient.setCallback(this);
             mqttClient.connect(mqttConnectOptions);
-//            mqttClient.subscribe(topic1,0);
-//            mqttClient.subscribe(topic2,0);
-            mqttClient.subscribe(topic);
+            mqttClient.subscribe(topic2,0);
         } catch (MqttException e) {
             e.printStackTrace();
         }
+
+
+        if (mqttClient.isConnected()) {
+            try {
+                mqttClient.publish(topic2, message.getBytes(), 0, false);
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+
 
 
         StartBn.setOnClickListener(new View.OnClickListener() {
@@ -127,39 +125,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
                     Toast.makeText(UniversalActivity.this, "Please Re-register.", Toast.LENGTH_SHORT).show();
             }
         });
-
-        RegBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                try {
-
-                    if (!mqttClient.isConnected()) {
-                        mqttClient.connect();
-                    }
-
-                    if (mqttClient.isConnected())
-                    {
-                        System.out.println("Sending message...");
-                        mqttClient.publish(topic1, message.getBytes(), 0, false);
-                        System.out.println("Sending done...");
-
-                        diverid = "-1";
-                        LayoutBg.setBackgroundColor(getResources().getColor(R.color.color9));
-                        Layout2.setVisibility(View.GONE);
-                        Layout1.setVisibility(View.VISIBLE);
-                    }
-                    else
-                        System.out.println("Failed To Send.......");
-
-
-                } catch (MqttException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-
-
-        healthTrackingService = new HealthTrackingService(this, getApplicationContext());
     }
 
     private void LoadFunc() {
@@ -167,8 +132,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         if (SaveID>0)
         {
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color10));
-            Layout1.setVisibility(View.VISIBLE);
-            Layout2.setVisibility(View.GONE);
             DiverID.setText(""+SaveID);
             StartBn.setVisibility(View.VISIBLE);
         }
@@ -227,7 +190,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     @Override
     protected void onResume() {
         super.onResume();
-        healthTrackingService.connectService();
         if (!mqttClient.isConnected()) {
             try {
                 mqttClient.connect();
@@ -266,23 +228,12 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         {
             Tools.saveID("diverid", finaldiverid, UniversalActivity.this);
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color10));
-            Layout1.setVisibility(View.VISIBLE);
-            Layout2.setVisibility(View.GONE);
             DiverID.setText(""+finaldiverid);
             StartBn.setVisibility(View.VISIBLE);
-        }
-        else if (finaldiverid == 0)
-        {
-            LayoutBg.setBackgroundColor(getResources().getColor(R.color.color8));
-            Layout1.setVisibility(View.GONE);
-            Layout2.setVisibility(View.VISIBLE);
-            StartBn.setVisibility(View.GONE);
         }
         else
         {
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color9));
-            Layout1.setVisibility(View.VISIBLE);
-            Layout2.setVisibility(View.GONE);
             DiverID.setText("Not Ready");
             StartBn.setVisibility(View.GONE);
         }
@@ -297,79 +248,4 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             e.printStackTrace();
         }
     }
-
-    @Override
-    public void onConnectionSuccess() {
-
-        //Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
-
-        try {
-            spo2Tracker = healthTrackingService.getHealthTracker(HealthTrackerType.SPO2);
-        } catch (final IllegalArgumentException e) {
-            runOnUiThread(() -> Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show()
-            );
-            finish();
-        }
-    }
-
-    @Override
-    public void onConnectionEnded() {
-        Toast.makeText(this, "Ended!!", Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onConnectionFailed(HealthTrackerException e) {
-
-        //Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
-
-    }
-
-    private final HealthTracker.TrackerEventListener trackerEventListener = new HealthTracker.TrackerEventListener() {
-        @Override
-        public void onDataReceived(@NonNull List<DataPoint> list) {
-            if (list.size() != 0) {
-                Log.i(TAG, "List Size : "+list.size());
-                for(DataPoint dataPoint : list) {
-                    int status = dataPoint.getValue(ValueKey.SpO2Set.STATUS);
-                    Log.i(TAG, "Status : " + status);
-                    runOnUiThread(() -> {
-                        if (status == 2) {
-                            if(spo2Tracker != null) {
-                                spo2Tracker.unsetEventListener();
-                            }
-                            handler.removeCallbacksAndMessages(null);
-                        }
-                        else if (status == 0) {
-                        }
-                        else if (status == -4){
-                            Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
-                        }
-                        else {
-                            Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
-                        }
-                    });
-                }
-            } else {
-                Log.i(TAG, "onDataReceived List is zero");
-            }
-        }
-
-        @Override
-        public void onFlushCompleted() {
-            Log.i(TAG, " onFlushCompleted called");
-        }
-
-        @Override
-        public void onError(HealthTracker.TrackerError trackerError) {
-            Log.i(TAG, " onError called");
-            if (trackerError == HealthTracker.TrackerError.PERMISSION_ERROR) {
-                runOnUiThread(() -> Toast.makeText(getApplicationContext(),
-                        "Permissions Check Failed", Toast.LENGTH_SHORT).show());
-            }
-            if (trackerError == HealthTracker.TrackerError.SDK_POLICY_ERROR) {
-                runOnUiThread(() -> Toast.makeText(getApplicationContext(),
-                        "SDK Policy denied", Toast.LENGTH_SHORT).show());
-            }
-        }
-    };
 }

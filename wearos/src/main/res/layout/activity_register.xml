@@ -5,9 +5,9 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="@dimen/box_inset_layout_padding"
-    tools:context=".UniversalActivity"
+    tools:context=".RegisterActivity"
     tools:deviceIds="wear"
-    android:background="@color/color9"
+    android:background="@color/color8"
     android:id="@+id/universal_layout_bg">
 
 
@@ -31,7 +31,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/universal_ssaid_text"
+            android:id="@+id/register_ssaid_text"
             android:layout_marginTop="5dp"
             android:layout_marginBottom="5dp"
             android:text=""
@@ -40,47 +40,24 @@
             android:fontFamily="@font/quicksand_medium"
             android:textColor="@color/black"/>
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="DiverID :"
-            android:layout_marginTop="5dp"
-            android:layout_marginBottom="5dp"
-            android:gravity="center"
-            android:textSize="14sp"
-            android:fontFamily="@font/quicksand_bold"
-            android:textColor="@color/black"/>
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:id="@+id/universal_diverid_text"
-            android:layout_marginTop="5dp"
-            android:layout_marginBottom="5dp"
-            android:text="Not Ready"
-            android:gravity="center"
-            android:textSize="14sp"
-            android:fontFamily="@font/quicksand_medium"
-            android:textColor="@color/black"/>
-
         <androidx.appcompat.widget.AppCompatButton
             android:layout_width="wrap_content"
             android:layout_height="30dp"
-            android:id="@+id/universal_start_btn"
-            android:layout_marginTop="5dp"
-            android:visibility="gone"
-            android:layout_marginBottom="5dp"
-            android:layout_gravity="center"
-            android:text="Start"
             android:gravity="center"
-            android:textSize="11sp"
+            android:id="@+id/register_registration_btn"
+            android:layout_marginTop="10dp"
             android:textColor="@color/white"
             android:textAllCaps="false"
+            android:layout_marginBottom="5dp"
+            android:layout_gravity="center"
+            android:text="Registration"
+            android:textSize="11sp"
             android:fontFamily="@font/quicksand_medium"
             android:background="@drawable/custom_layout3"
             android:paddingTop="5dp"
             android:paddingBottom="5dp"
-            android:paddingLeft="20dp"
-            android:paddingRight="20dp"/>
+            android:paddingLeft="10dp"
+            android:paddingRight="10dp"/>
 
     </LinearLayout>
 
