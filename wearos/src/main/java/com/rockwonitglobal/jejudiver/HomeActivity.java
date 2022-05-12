@@ -67,6 +67,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public class HomeActivity extends WearableActivity
@@ -100,22 +101,23 @@ public class HomeActivity extends WearableActivity
     boolean isNetworkEnabled = false;
 
     private double latitude = 0, longitude = 0;
-    private CountDownTimer cdt;
     private int finalheartrate;
     private RequestChecker requestChecker;
     private String androidId, diverID = "";
-    private int finaldiverid, datasend;
+    private int finaldiverid, sp02value = 0;
 
 
-    private final String serverUrl   = "tcp://220.118.147.52:7883";
-    private final String clientId    = "RW_WATCH_01";
-    private String message2, message3;  // example data
+    private final String serverUrl   = "ssl://iot.shovvel.com:47883";
+    private String clientId = "";
+    private String messagehearrate, messagesos, messagesp02;  // example data
     //final String tenant      = "<<tenant_ID>>";
     private final String username    = "rwit";
     private final String password    = "5be70721a1a11eae0280ef87b0c29df5aef7f248";
-    private final String[] topic= {"RW/JD/HD","RW/JD/ES"};
-    private final String topic1 = "RW/JD/HD"; //  RW/JD/DI TODO chanag!!!!
-    private final String topic2 = "RW/JD/ES"; //  RW/JD/DI TODO chanag!!!!
+    private final String[] topicwithheartrate= {"RW/JD/HD","RW/JD/ES"};
+    private final String[] topicwithsp02 = {"RW/JD/SP","RW/JD/ES"};
+    private final String topic1 = "RW/JD/HD";
+    private final String topic2 = "RW/JD/ES";
+    private final String topic3 = "RW/JD/SP";
     private MqttClient mqttClient;
     private MqttConnectOptions mqttConnectOptions;
 
@@ -130,6 +132,7 @@ public class HomeActivity extends WearableActivity
     private String TAG = "Test";
     private final int REQUEST_ACCOUNT_PERMISSION = 100;
     private final String[] permissions = {"android.permission.BODY_SENSORS"};
+    private int options = 0;
 
 
 
@@ -151,17 +154,7 @@ public class HomeActivity extends WearableActivity
         finaldiverid = Tools.getID("diverid", HomeActivity.this);
         requestChecker = new RequestChecker(HomeActivity.this);
 
-
-        HeartRateClick.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (requestChecker.CheckingPermissionIsEnabledOrNot()) {
-                    getHeartRate();
-                }
-                else
-                    requestChecker.RequestMultiplePermission();
-            }
-        });
+        options = getIntent().getIntExtra("options",0);
 
         SOS.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -170,16 +163,31 @@ public class HomeActivity extends WearableActivity
             }
         });
 
-        // Register the local broadcast receiver
+       /* // Register the local broadcast receiver
         IntentFilter messageFilter = new IntentFilter(Intent.ACTION_SEND);
         MessageReceiver messageReceiver = new MessageReceiver();
-        LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);
+        LocalBroadcastManager.getInstance(this).registerReceiver(messageReceiver, messageFilter);*/
 
 
         Stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Tools.saveID("datasend",0,HomeActivity.this);
+                if(spo2Tracker != null) {
+                    spo2Tracker.unsetEventListener();
+                }
+                handler.removeCallbacksAndMessages(null);
+                if(healthTrackingService != null) {
+                    healthTrackingService.disconnectService();
+                }
+
+                if (mqttClient.isConnected()) {
+                    try {
+                        mqttClient.disconnect();
+                        mqttClient.close();
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
+                }
                 startActivity(new Intent(HomeActivity.this, UniversalActivity.class));
                 finish();
             }
@@ -188,6 +196,8 @@ public class HomeActivity extends WearableActivity
 
         androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
+
+        clientId = UUID.randomUUID().toString();
 
         mqttConnectOptions = new MqttConnectOptions();
         mqttConnectOptions.setCleanSession(true);
@@ -201,30 +211,13 @@ public class HomeActivity extends WearableActivity
             mqttClient = new MqttClient(serverUrl, clientId, new MemoryPersistence());
             mqttClient.setCallback(this);
             mqttClient.connect(mqttConnectOptions);
-            mqttClient.subscribe(topic1,0);
-            mqttClient.subscribe(topic2,0);
+            if (options == 1)
+                mqttClient.subscribe(topicwithheartrate);
+            else if (options == 2)
+                mqttClient.subscribe(topicwithsp02);
         } catch (MqttException e) {
             e.printStackTrace();
         }
-
-        if (PermissionActivity.checkPermission(this, this.permissions)) {
-            Log.i(TAG, "onCreate Permission granted");
-            setUp();
-        } else {
-            Log.i(TAG, "onCreate Permission not granted");
-            PermissionActivity.showPermissionPrompt(this, this.REQUEST_ACCOUNT_PERMISSION, this.permissions);
-        }
-
-        Sp02Click.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Toast.makeText(HomeActivity.this, "SpO2 measuring", Toast.LENGTH_SHORT).show();
-                handler.post(() -> {
-                    if (spo2Tracker!=null)
-                        spo2Tracker.setEventListener(trackerEventListener);
-                });
-            }
-        });
     }
 
     public static String getCurrentTimestamp() {
@@ -239,7 +232,10 @@ public class HomeActivity extends WearableActivity
         handler2.postDelayed(runnable = new Runnable() {
             public void run() {
                 handler2.postDelayed(runnable, delay);
-                PublishData();
+                if (options == 1)
+                    PublishDataWithHearRate();
+                else if(options == 2)
+                    PublishDataWithSp02();
                 Toast.makeText(HomeActivity.this, "This method is run every 1 min",
                         Toast.LENGTH_SHORT).show();
 
@@ -247,13 +243,13 @@ public class HomeActivity extends WearableActivity
         }, delay);
     }
 
-    private void PublishData() {
+    private void PublishDataWithHearRate() {
         System.out.println("This method is run every 1 min");
 
         try {
             getLOcation();
             if (latitude!=0.0)
-                message2 = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
+                messagehearrate = "ID || HD ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
 
             if (!mqttClient.isConnected()) {
                 mqttClient.connect();
@@ -261,8 +257,8 @@ public class HomeActivity extends WearableActivity
 
             if (mqttClient.isConnected())
             {
-                System.out.println("Sending message...");
-                mqttClient.publish(topic1, message2.getBytes(), 0, false);
+                System.out.println("Sending heart rate...");
+                mqttClient.publish(topic1, messagehearrate.getBytes(), 0, false);
                 System.out.println("Sending done...");
             }
             else
@@ -272,12 +268,33 @@ public class HomeActivity extends WearableActivity
         } catch (MqttException e) {
             e.printStackTrace();
         }
-
-        datasend = Tools.getID("datasend", HomeActivity.this);
-        if (datasend == 1)
-            if (cdt!=null)
-                cdt.start();
     }
+
+    private void PublishDataWithSp02() {
+        System.out.println("This method is run every 1 min");
+
+        try {
+            messagesp02 = "ID || SP ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ PER || "+sp02value+"  ^^ TS || "+getCurrentTimestamp();
+
+            if (!mqttClient.isConnected()) {
+                mqttClient.connect();
+            }
+
+            if (mqttClient.isConnected())
+            {
+                System.out.println("Sending sp02...");
+                mqttClient.publish(topic3, messagesp02.getBytes(), 0, false);
+                System.out.println("Sending done...");
+            }
+            else
+                System.out.println("Failed To Send.......");
+
+
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+    }
+
 
 
     @Override
@@ -291,9 +308,6 @@ public class HomeActivity extends WearableActivity
         if(healthTrackingService != null) {
             healthTrackingService.disconnectService();
         }
-
-        if (cdt!=null)
-            cdt.cancel();
 
         if (mqttClient.isConnected()) {
             try {
@@ -314,7 +328,7 @@ public class HomeActivity extends WearableActivity
             getLOcation();
 
             if (latitude!=0.0)
-                message3 = "ID || ES ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
+                messagesos = "ID || ES ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ LAT || "+latitude+" ^^ LNG || "+longitude+" ^^ HR || "+finalheartrate+" ^^ TS || "+getCurrentTimestamp();
 
             if (!mqttClient.isConnected()) {
                 mqttClient.connect();
@@ -322,8 +336,8 @@ public class HomeActivity extends WearableActivity
 
             if (mqttClient.isConnected())
             {
-                System.out.println("Sending message...");
-                mqttClient.publish(topic2, message3.getBytes(), 0, false);
+                System.out.println("Sending sos...");
+                mqttClient.publish(topic2, messagesos.getBytes(), 0, false);
                 System.out.println("Sending done...");
                 Toast.makeText(HomeActivity.this, "SOS Successful!!", Toast.LENGTH_SHORT).show();
             }
@@ -361,6 +375,13 @@ public class HomeActivity extends WearableActivity
         animator.start();
     }
 
+    private void getSp02Value() {
+        handler.post(() -> {
+            if (spo2Tracker!=null)
+                spo2Tracker.setEventListener(trackerEventListener);
+        });
+    }
+
     @Override
     public void onSensorChanged(SensorEvent event) {
 
@@ -372,6 +393,7 @@ public class HomeActivity extends WearableActivity
                 animator.start();
                 TextHearRate.setText(Integer.toString(heart_rate) +"");
                 finalheartrate = heart_rate;
+                Tools.saveID("heart_rate",finalheartrate,HomeActivity.this);
                 sendData(String.valueOf(finalheartrate));
             }
         }
@@ -389,7 +411,7 @@ public class HomeActivity extends WearableActivity
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();
-        healthTrackingService.connectService();
+
         if (!mqttClient.isConnected()) {
             try {
                 mqttClient.connect();
@@ -403,8 +425,20 @@ public class HomeActivity extends WearableActivity
     }
 
     private void LoadFunc() {
-        if (requestChecker.CheckingPermissionIsEnabledOrNot())
-            getHeartRate();
+
+        TextHearRate.setText(""+Tools.getID("heart_rate",HomeActivity.this));
+        TextSp02.setText(""+Tools.getID("sp02_value",HomeActivity.this));
+
+        if (requestChecker.CheckingPermissionIsEnabledOrNot()) {
+
+            healthTrackingService = new HealthTrackingService(this, getApplicationContext());
+            healthTrackingService.connectService();
+
+            if (options == 1)
+                getHeartRate();
+            else if (options == 2)
+                getSp02Value();
+        }
         else
             requestChecker.RequestMultiplePermission();
 
@@ -681,6 +715,7 @@ public class HomeActivity extends WearableActivity
                         else {
                             Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
                         }
+                        Tools.saveID("sp02_value",dataPoint.getValue(ValueKey.SpO2Set.SPO2),HomeActivity.this);
                         TextSp02.setText(String.valueOf(dataPoint.getValue(ValueKey.SpO2Set.SPO2)));
                     });
                 }
@@ -707,23 +742,5 @@ public class HomeActivity extends WearableActivity
             }
         }
     };
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        Log.i(TAG, "onActivityResult requestCode = " + requestCode + " resultCode = " + resultCode);
-        if (requestCode == this.REQUEST_ACCOUNT_PERMISSION) {
-            if (resultCode == -1) {
-                setUp();
-            } else {
-                finish();
-            }
-        }
-    }
-
-    public final void setUp() {
-        healthTrackingService = new HealthTrackingService(this, getApplicationContext());
-        healthTrackingService.connectService();
-    }
 
 }

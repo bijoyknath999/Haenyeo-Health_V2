@@ -35,18 +35,19 @@ import com.samsung.android.service.health.tracking.data.ValueKey;
 
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 public class UniversalActivity extends AppCompatActivity implements MqttCallback {
 
     private TextView SSAIDTEXT,DiverID;
     private BoxInsetLayout LayoutBg;
-    private AppCompatButton StartBn;
+    private AppCompatButton HeartRateBtn,Sp02Btn;
     private String androidId, diverid = "0";
 
     private int finaldiverid, SaveID;
 
-    private final String serverUrl   = "tcp://220.118.147.52:7883";
-    private final String clientId    = "RW_WATCH_01";
+    private final String serverUrl   = "ssl://iot.shovvel.com:47883";
+    private String clientId    = "";
     private String message;  // example data
     //final String tenant      = "<<tenant_ID>>";
     private final String username    = "rwit";
@@ -66,13 +67,16 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
         SSAIDTEXT = findViewById(R.id.universal_ssaid_text);
         DiverID = findViewById(R.id.universal_diverid_text);
-        StartBn = findViewById(R.id.universal_start_btn);
+        HeartRateBtn = findViewById(R.id.universal_heart_rate_btn);
+        Sp02Btn = findViewById(R.id.universal_sp02_btn);
 
 
         LayoutBg = findViewById(R.id.universal_layout_bg);
 
         androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
+
+        clientId = UUID.randomUUID().toString();
 
         SSAIDTEXT.setText(""+androidId);
 
@@ -106,20 +110,44 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
 
 
-        StartBn.setOnClickListener(new View.OnClickListener() {
+        HeartRateBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 int diveid_ = Tools.getID("diverid",UniversalActivity.this);
                 if (diveid_ > 0) {
+                    if (cdt!=null)
+                        cdt.cancel();
                     try {
                         mqttClient.disconnect();
                         mqttClient.close();
                     } catch (MqttException e) {
                         e.printStackTrace();
                     }
-                    Tools.saveID("datasend", 1, UniversalActivity.this);
-                    startActivity(new Intent(UniversalActivity.this, HomeActivity.class));
-                    finish();
+                    Intent intent = new Intent(UniversalActivity.this,HomeActivity.class);
+                    intent.putExtra("options",1);
+                    startActivity(intent);
+                }
+                else
+                    Toast.makeText(UniversalActivity.this, "Please Re-register.", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        Sp02Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                int diveid_ = Tools.getID("diverid",UniversalActivity.this);
+                if (diveid_ > 0) {
+                    if (cdt!=null)
+                        cdt.cancel();
+                    try {
+                        mqttClient.disconnect();
+                        mqttClient.close();
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
+                    Intent intent = new Intent(UniversalActivity.this,HomeActivity.class);
+                    intent.putExtra("options",2);
+                    startActivity(intent);
                 }
                 else
                     Toast.makeText(UniversalActivity.this, "Please Re-register.", Toast.LENGTH_SHORT).show();
@@ -133,7 +161,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         {
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color10));
             DiverID.setText(""+SaveID);
-            StartBn.setVisibility(View.VISIBLE);
+            HeartRateBtn.setVisibility(View.VISIBLE);
+            Sp02Btn.setVisibility(View.VISIBLE);
         }
 
         cdt = new CountDownTimer(3000,1000) {
@@ -229,14 +258,14 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             Tools.saveID("diverid", finaldiverid, UniversalActivity.this);
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color10));
             DiverID.setText(""+finaldiverid);
-            StartBn.setVisibility(View.VISIBLE);
-        }
+            HeartRateBtn.setVisibility(View.VISIBLE);
+            Sp02Btn.setVisibility(View.VISIBLE);        }
         else
         {
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color9));
             DiverID.setText("Not Ready");
-            StartBn.setVisibility(View.GONE);
-        }
+            HeartRateBtn.setVisibility(View.GONE);
+            Sp02Btn.setVisibility(View.GONE);        }
     }
 
     @Override

@@ -19,6 +19,12 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault"
         android:usesCleartextTraffic="true">
+
+        <activity
+            android:name=".PermissionActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.HHMS"/>
         <activity
             android:name=".RegisterActivity"
             android:exported="false"

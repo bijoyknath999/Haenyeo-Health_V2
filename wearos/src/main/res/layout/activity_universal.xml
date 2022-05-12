@@ -17,6 +17,19 @@
         android:orientation="vertical"
         android:layout_gravity="center">
 
+        <androidx.appcompat.widget.AppCompatButton
+            android:layout_width="80dp"
+            android:layout_height="30dp"
+            android:textColor="@color/white"
+            android:id="@+id/universal_sp02_btn"
+            android:visibility="gone"
+            android:text="Sp02"
+            android:layout_gravity="center"
+            android:layout_marginBottom="5dp"
+            android:textSize="11sp"
+            android:textAllCaps="false"
+            android:background="@drawable/custom_card3"/>
+
 
         <TextView
             android:layout_width="match_parent"
@@ -63,24 +76,19 @@
             android:textColor="@color/black"/>
 
         <androidx.appcompat.widget.AppCompatButton
-            android:layout_width="wrap_content"
+            android:id="@+id/universal_heart_rate_btn"
+            android:layout_width="80dp"
             android:layout_height="30dp"
-            android:id="@+id/universal_start_btn"
-            android:layout_marginTop="5dp"
             android:visibility="gone"
+            android:layout_marginTop="5dp"
             android:layout_marginBottom="5dp"
             android:layout_gravity="center"
-            android:text="Start"
-            android:gravity="center"
-            android:textSize="11sp"
             android:textColor="@color/white"
+            android:background="@drawable/custom_card2"
+            android:text="Heart Rate"
             android:textAllCaps="false"
-            android:fontFamily="@font/quicksand_medium"
-            android:background="@drawable/custom_layout3"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
-            android:paddingLeft="20dp"
-            android:paddingRight="20dp"/>
+            android:textSize="11sp" />
+
 
     </LinearLayout>
 
