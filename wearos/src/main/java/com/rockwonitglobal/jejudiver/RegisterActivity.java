@@ -28,13 +28,14 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 public class RegisterActivity extends AppCompatActivity implements MqttCallback {
 
     private TextView SSAIDTEXT;
     private AppCompatButton RegBtn;
-    private final String serverUrl   = "tcp://220.118.147.52:7883";
-    private final String clientId    = "RW_WATCH_01";
+    private final String serverUrl   = "ssl://iot.shovvel.com:47883";
+    private String clientId    = "";
     private String message;  // example data
     //final String tenant      = "<<tenant_ID>>";
     private final String username    = "rwit";
@@ -55,6 +56,9 @@ public class RegisterActivity extends AppCompatActivity implements MqttCallback 
 
         androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
+
+        clientId = UUID.randomUUID().toString();
+
 
         SSAIDTEXT.setText(""+androidId);
 
@@ -81,6 +85,7 @@ public class RegisterActivity extends AppCompatActivity implements MqttCallback 
         RegBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Toast.makeText(RegisterActivity.this, "Clicked", Toast.LENGTH_SHORT).show();
                 try {
 
                     if (!mqttClient.isConnected()) {
@@ -94,14 +99,14 @@ public class RegisterActivity extends AppCompatActivity implements MqttCallback 
                         System.out.println("Sending done...");
                         mqttClient.disconnect();
                         mqttClient.close();
-                        startActivity(new Intent(RegisterActivity.this,HomeActivity.class));
+                        startActivity(new Intent(RegisterActivity.this,UniversalActivity.class));
                     }
                     else
                         System.out.println("Failed To Send.......");
 
 
                 } catch (MqttException e) {
-                    System.out.println(""+e.getMessage());
+                    System.out.println("Error :"+e.getMessage());
                 }
             }
         });

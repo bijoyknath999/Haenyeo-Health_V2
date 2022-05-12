@@ -133,6 +133,7 @@ public class HomeActivity extends WearableActivity
     private final int REQUEST_ACCOUNT_PERMISSION = 100;
     private final String[] permissions = {"android.permission.BODY_SENSORS"};
     private int options = 0;
+    private boolean IsSp02Connected = false;
 
 
 
@@ -176,6 +177,7 @@ public class HomeActivity extends WearableActivity
                     spo2Tracker.unsetEventListener();
                 }
                 handler.removeCallbacksAndMessages(null);
+                handler2.removeCallbacksAndMessages(null);
                 if(healthTrackingService != null) {
                     healthTrackingService.disconnectService();
                 }
@@ -234,18 +236,11 @@ public class HomeActivity extends WearableActivity
                 handler2.postDelayed(runnable, delay);
                 if (options == 1)
                     PublishDataWithHearRate();
-                else if(options == 2)
-                    PublishDataWithSp02();
-                Toast.makeText(HomeActivity.this, "This method is run every 1 min",
-                        Toast.LENGTH_SHORT).show();
-
             }
         }, delay);
     }
 
     private void PublishDataWithHearRate() {
-        System.out.println("This method is run every 1 min");
-
         try {
             getLOcation();
             if (latitude!=0.0)
@@ -308,7 +303,7 @@ public class HomeActivity extends WearableActivity
         if(healthTrackingService != null) {
             healthTrackingService.disconnectService();
         }
-
+        handler2.removeCallbacksAndMessages(null);
         if (mqttClient.isConnected()) {
             try {
                 mqttClient.disconnect();
@@ -376,10 +371,12 @@ public class HomeActivity extends WearableActivity
     }
 
     private void getSp02Value() {
-        handler.post(() -> {
-            if (spo2Tracker!=null)
-                spo2Tracker.setEventListener(trackerEventListener);
-        });
+
+        if (IsSp02Connected)
+            handler.post(() -> {
+                if (spo2Tracker!=null)
+                    spo2Tracker.setEventListener(trackerEventListener);
+            });
     }
 
     @Override
@@ -668,7 +665,9 @@ public class HomeActivity extends WearableActivity
     @Override
     public void onConnectionSuccess() {
 
-        Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
+        IsSp02Connected = true;
+
+        //Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
 
         try {
             spo2Tracker = healthTrackingService.getHealthTracker(HealthTrackerType.SPO2);
@@ -681,13 +680,14 @@ public class HomeActivity extends WearableActivity
 
     @Override
     public void onConnectionEnded() {
-        Toast.makeText(this, "Ended!!", Toast.LENGTH_SHORT).show();
+        IsSp02Connected = false;
+        //Toast.makeText(this, "Ended!!", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onConnectionFailed(HealthTrackerException e) {
-
-        Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
+        IsSp02Connected = false;
+        //Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
 
     }
 
@@ -702,6 +702,7 @@ public class HomeActivity extends WearableActivity
                     runOnUiThread(() -> {
 
                         if (status == 2) {
+                            Toast.makeText(HomeActivity.this, "Success!!", Toast.LENGTH_SHORT).show();
                             if(spo2Tracker != null) {
                                 spo2Tracker.unsetEventListener();
                             }
@@ -710,12 +711,13 @@ public class HomeActivity extends WearableActivity
                         else if (status == 0) {
                         }
                         else if (status == -4){
-                            Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
                         }
                         else {
-                            Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
                         }
                         Tools.saveID("sp02_value",dataPoint.getValue(ValueKey.SpO2Set.SPO2),HomeActivity.this);
+                        PublishDataWithSp02();
                         TextSp02.setText(String.valueOf(dataPoint.getValue(ValueKey.SpO2Set.SPO2)));
                     });
                 }

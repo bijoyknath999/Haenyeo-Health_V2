@@ -80,7 +80,11 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
         SSAIDTEXT.setText(""+androidId);
 
-        message = "ID || DS ^^ EQID || "+androidId+" ^^ HNID || -1 ^^ TS || "+getCurrentTimestamp();
+        SaveID = Tools.getID("diverid",UniversalActivity.this);
+        if (SaveID>0)
+            message = "ID || DS ^^ EQID || "+androidId+" ^^ HNID || "+SaveID+" ^^ TS || "+getCurrentTimestamp();
+        else
+            message = "ID || DS ^^ EQID || "+androidId+" ^^ HNID || -1 ^^ TS || "+getCurrentTimestamp();
 
         mqttConnectOptions = new MqttConnectOptions();
         mqttConnectOptions.setCleanSession(true);
@@ -233,6 +237,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     protected void onDestroy() {
         super.onDestroy();
 
+
         if (cdt!=null)
             cdt.cancel();
 
@@ -253,6 +258,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
         finaldiverid = Tools.getID("diverid",UniversalActivity.this);
 
+        Toast.makeText(this, ""+finaldiverid, Toast.LENGTH_SHORT).show();
+
         if (finaldiverid>0)
         {
             Tools.saveID("diverid", finaldiverid, UniversalActivity.this);
@@ -265,7 +272,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color9));
             DiverID.setText("Not Ready");
             HeartRateBtn.setVisibility(View.GONE);
-            Sp02Btn.setVisibility(View.GONE);        }
+            Sp02Btn.setVisibility(View.GONE);
+        }
     }
 
     @Override
