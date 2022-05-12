@@ -80,11 +80,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
         SSAIDTEXT.setText(""+androidId);
 
-        SaveID = Tools.getID("diverid",UniversalActivity.this);
-        if (SaveID>0)
-            message = "ID || DS ^^ EQID || "+androidId+" ^^ HNID || "+SaveID+" ^^ TS || "+getCurrentTimestamp();
-        else
-            message = "ID || DS ^^ EQID || "+androidId+" ^^ HNID || -1 ^^ TS || "+getCurrentTimestamp();
 
         mqttConnectOptions = new MqttConnectOptions();
         mqttConnectOptions.setCleanSession(true);
@@ -103,14 +98,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             e.printStackTrace();
         }
 
-
-        if (mqttClient.isConnected()) {
-            try {
-                mqttClient.publish(topic2, message.getBytes(), 0, false);
-            } catch (MqttException e) {
-                e.printStackTrace();
-            }
-        }
 
 
 
@@ -139,6 +126,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         Sp02Btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                Toast.makeText(UniversalActivity.this, "Checking", Toast.LENGTH_SHORT).show();
                 int diveid_ = Tools.getID("diverid",UniversalActivity.this);
                 if (diveid_ > 0) {
                     if (cdt!=null)

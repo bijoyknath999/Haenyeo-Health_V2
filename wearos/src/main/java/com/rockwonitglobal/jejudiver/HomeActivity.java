@@ -118,6 +118,7 @@ public class HomeActivity extends WearableActivity
     private final String topic1 = "RW/JD/HD";
     private final String topic2 = "RW/JD/ES";
     private final String topic3 = "RW/JD/SP";
+    private final String topic4 = "RW/JD/DS";
     private MqttClient mqttClient;
     private MqttConnectOptions mqttConnectOptions;
 
@@ -213,10 +214,7 @@ public class HomeActivity extends WearableActivity
             mqttClient = new MqttClient(serverUrl, clientId, new MemoryPersistence());
             mqttClient.setCallback(this);
             mqttClient.connect(mqttConnectOptions);
-            if (options == 1)
-                mqttClient.subscribe(topicwithheartrate);
-            else if (options == 2)
-                mqttClient.subscribe(topicwithsp02);
+            mqttClient.subscribe(topic4);  //only receive RW/JD/DS data
         } catch (MqttException e) {
             e.printStackTrace();
         }
@@ -374,10 +372,11 @@ public class HomeActivity extends WearableActivity
             @Override
             public void run() {
                 if (spo2Tracker!=null) {
+                    Toast.makeText(HomeActivity.this, "Measuring", Toast.LENGTH_SHORT).show();
                     spo2Tracker.setEventListener(trackerEventListener);
                 }
             }
-        }, 15000);
+        }, 3000);
     }
 
     @Override
@@ -644,13 +643,24 @@ public class HomeActivity extends WearableActivity
 
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
-        System.out.println("topic :"+topic);
-        System.out.println("message :"+message);
-        String messageStr = String.valueOf(message);
-        String messageStr2 = messageStr.substring(messageStr.indexOf("HNID || ")+8);
-        String firstWord = messageStr2.replaceAll(" ", "*");
-        diverID = firstWord.substring(0, firstWord.indexOf("*^"));
-        //finaldiverid = Integer.parseInt(diverID);
+        if (topic4.equals("RW/JD/DS"))
+        {
+            System.out.println("topic :"+topic);
+            System.out.println("message :"+message);
+            String messageStr = String.valueOf(message);
+            String messageStr2 = messageStr.substring(messageStr.indexOf("HNID || ")+8);
+            String firstWord = messageStr2.replaceAll(" ", "*");
+            diverID = firstWord.substring(0, firstWord.indexOf("*^"));
+            int dID = Integer.parseInt(diverID);
+            Tools.saveID("diverid", dID,HomeActivity.this);
+            if (diverID.equals("-1"))
+                {
+                    startActivity(new Intent(HomeActivity.this, UniversalActivity.class));
+                    finish();
+                }
+            else if (dID>0)
+                finaldiverid = dID;
+        }
     }
 
     @Override

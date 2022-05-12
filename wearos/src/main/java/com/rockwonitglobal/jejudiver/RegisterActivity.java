@@ -76,7 +76,6 @@ public class RegisterActivity extends AppCompatActivity implements MqttCallback 
             mqttClient = new MqttClient(serverUrl, clientId, new MemoryPersistence());
             mqttClient.setCallback(this);
             mqttClient.connect(mqttConnectOptions);
-            mqttClient.subscribe(topic1,0);
         } catch (MqttException e) {
             e.printStackTrace();
         }
