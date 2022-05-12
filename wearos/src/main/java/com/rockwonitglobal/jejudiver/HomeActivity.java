@@ -20,6 +20,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.support.wearable.activity.WearableActivity;
 import android.util.Log;
@@ -32,6 +33,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.gms.tasks.Task;
@@ -45,6 +47,14 @@ import com.google.android.gms.wearable.Node;
 import com.google.android.gms.wearable.PutDataMapRequest;
 import com.google.android.gms.wearable.PutDataRequest;
 import com.google.android.gms.wearable.Wearable;
+import com.samsung.android.service.health.tracking.ConnectionListener;
+import com.samsung.android.service.health.tracking.HealthTracker;
+import com.samsung.android.service.health.tracking.HealthTrackerException;
+import com.samsung.android.service.health.tracking.HealthTrackingService;
+import com.samsung.android.service.health.tracking.data.DataPoint;
+import com.samsung.android.service.health.tracking.data.HealthTrackerType;
+import com.samsung.android.service.health.tracking.data.ValueKey;
+
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttClient;
@@ -52,6 +62,7 @@ import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Calendar;
 import java.util.Date;
@@ -59,14 +70,14 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 public class HomeActivity extends WearableActivity
-        implements SensorEventListener, DataClient.OnDataChangedListener, LocationListener, MqttCallback {
+        implements SensorEventListener, DataClient.OnDataChangedListener, LocationListener, MqttCallback, ConnectionListener {
 
-    TextView TextHearRate;
+    TextView TextHearRate, TextSp02;
     ImageView ImgHeart;
     private ObjectAnimator animator;
     private SensorManager sensorService;
     private Sensor heartSensor;
-    private LinearLayout HeartRateClick;
+    private LinearLayout HeartRateClick, Sp02Click;
     public static int i = 0;
     private Button Stop, SOS;
 
@@ -108,10 +119,17 @@ public class HomeActivity extends WearableActivity
     private MqttClient mqttClient;
     private MqttConnectOptions mqttConnectOptions;
 
-    Handler handler = new Handler();
+    Handler handler2 = new Handler();
     Runnable runnable;
     int delay = 60000;
 
+    private HealthTracker spo2Tracker = null;
+    private HealthTrackingService healthTrackingService = null;
+    private final Handler handler = new Handler(Looper.myLooper());
+
+    private String TAG = "Test";
+    private final int REQUEST_ACCOUNT_PERMISSION = 100;
+    private final String[] permissions = {"android.permission.BODY_SENSORS"};
 
 
 
@@ -123,8 +141,10 @@ public class HomeActivity extends WearableActivity
 
 
         TextHearRate = findViewById(R.id.text_heart_rate);
+        TextSp02 = findViewById(R.id.home_sp02);
         ImgHeart = findViewById(R.id.image_heart);
         HeartRateClick = findViewById(R.id.home_heart_click);
+        Sp02Click = findViewById(R.id.home_sp02_click);
         SOS = findViewById(R.id.home_sos);
         Stop = findViewById(R.id.home_stop);
 
@@ -164,6 +184,7 @@ public class HomeActivity extends WearableActivity
                 finish();
             }
         });
+        
 
         androidId = Settings.Secure.getString(getContentResolver(),
                 Settings.Secure.ANDROID_ID);
@@ -185,6 +206,25 @@ public class HomeActivity extends WearableActivity
         } catch (MqttException e) {
             e.printStackTrace();
         }
+
+        if (PermissionActivity.checkPermission(this, this.permissions)) {
+            Log.i(TAG, "onCreate Permission granted");
+            setUp();
+        } else {
+            Log.i(TAG, "onCreate Permission not granted");
+            PermissionActivity.showPermissionPrompt(this, this.REQUEST_ACCOUNT_PERMISSION, this.permissions);
+        }
+
+        Sp02Click.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Toast.makeText(HomeActivity.this, "SpO2 measuring", Toast.LENGTH_SHORT).show();
+                handler.post(() -> {
+                    if (spo2Tracker!=null)
+                        spo2Tracker.setEventListener(trackerEventListener);
+                });
+            }
+        });
     }
 
     public static String getCurrentTimestamp() {
@@ -196,9 +236,9 @@ public class HomeActivity extends WearableActivity
     }
 
     private void RunTimer() {
-        handler.postDelayed(runnable = new Runnable() {
+        handler2.postDelayed(runnable = new Runnable() {
             public void run() {
-                handler.postDelayed(runnable, delay);
+                handler2.postDelayed(runnable, delay);
                 PublishData();
                 Toast.makeText(HomeActivity.this, "This method is run every 1 min",
                         Toast.LENGTH_SHORT).show();
@@ -243,6 +283,14 @@ public class HomeActivity extends WearableActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        if(spo2Tracker != null) {
+            spo2Tracker.unsetEventListener();
+        }
+        handler.removeCallbacksAndMessages(null);
+        if(healthTrackingService != null) {
+            healthTrackingService.disconnectService();
+        }
 
         if (cdt!=null)
             cdt.cancel();
@@ -341,6 +389,7 @@ public class HomeActivity extends WearableActivity
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();
+        healthTrackingService.connectService();
         if (!mqttClient.isConnected()) {
             try {
                 mqttClient.connect();
@@ -581,4 +630,100 @@ public class HomeActivity extends WearableActivity
             e.printStackTrace();
         }
     }
+
+    @Override
+    public void onConnectionSuccess() {
+
+        Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
+
+        try {
+            spo2Tracker = healthTrackingService.getHealthTracker(HealthTrackerType.SPO2);
+        } catch (final IllegalArgumentException e) {
+            runOnUiThread(() -> Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show()
+            );
+            finish();
+        }
+    }
+
+    @Override
+    public void onConnectionEnded() {
+        Toast.makeText(this, "Ended!!", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onConnectionFailed(HealthTrackerException e) {
+
+        Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
+
+    }
+
+    private final HealthTracker.TrackerEventListener trackerEventListener = new HealthTracker.TrackerEventListener() {
+        @Override
+        public void onDataReceived(@NonNull List<DataPoint> list) {
+            if (list.size() != 0) {
+                Log.i(TAG, "List Size : "+list.size());
+                for(DataPoint dataPoint : list) {
+                    int status = dataPoint.getValue(ValueKey.SpO2Set.STATUS);
+                    Log.i(TAG, "Status : " + status);
+                    runOnUiThread(() -> {
+
+                        if (status == 2) {
+                            if(spo2Tracker != null) {
+                                spo2Tracker.unsetEventListener();
+                            }
+                            handler.removeCallbacksAndMessages(null);
+                        }
+                        else if (status == 0) {
+                        }
+                        else if (status == -4){
+                            Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
+                        }
+                        else {
+                            Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
+                        }
+                        TextSp02.setText(String.valueOf(dataPoint.getValue(ValueKey.SpO2Set.SPO2)));
+                    });
+                }
+            } else {
+                Log.i(TAG, "onDataReceived List is zero");
+            }
+        }
+
+        @Override
+        public void onFlushCompleted() {
+            Log.i(TAG, " onFlushCompleted called");
+        }
+
+        @Override
+        public void onError(HealthTracker.TrackerError trackerError) {
+            Log.i(TAG, " onError called");
+            if (trackerError == HealthTracker.TrackerError.PERMISSION_ERROR) {
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(),
+                        "Permissions Check Failed", Toast.LENGTH_SHORT).show());
+            }
+            if (trackerError == HealthTracker.TrackerError.SDK_POLICY_ERROR) {
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(),
+                        "SDK Policy denied", Toast.LENGTH_SHORT).show());
+            }
+        }
+    };
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        Log.i(TAG, "onActivityResult requestCode = " + requestCode + " resultCode = " + resultCode);
+        if (requestCode == this.REQUEST_ACCOUNT_PERMISSION) {
+            if (resultCode == -1) {
+                setUp();
+            } else {
+                finish();
+            }
+        }
+    }
+
+    public final void setUp() {
+        healthTrackingService = new HealthTrackingService(this, getApplicationContext());
+        healthTrackingService.connectService();
+    }
+
 }

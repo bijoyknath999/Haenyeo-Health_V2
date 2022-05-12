@@ -94,14 +94,14 @@ public class RegisterActivity extends AppCompatActivity implements MqttCallback 
                         System.out.println("Sending done...");
                         mqttClient.disconnect();
                         mqttClient.close();
-                        startActivity(new Intent(RegisterActivity.this,UniversalActivity.class));
+                        startActivity(new Intent(RegisterActivity.this,HomeActivity.class));
                     }
                     else
                         System.out.println("Failed To Send.......");
 
 
                 } catch (MqttException e) {
-                    e.printStackTrace();
+                    System.out.println(""+e.getMessage());
                 }
             }
         });

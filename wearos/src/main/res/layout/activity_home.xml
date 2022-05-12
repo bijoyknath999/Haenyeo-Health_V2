@@ -31,21 +31,25 @@
                 android:background="@drawable/custom_card2"/>
 
 
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingLeft="20dp"
+            android:paddingRight="20dp"
+            android:paddingTop="0dp"
+            android:paddingBottom="0dp"
+            android:layout_marginLeft="10dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginRight="10dp"
+            android:layout_marginBottom="5dp"
+            android:layout_gravity="center"
+            android:background="@drawable/custom_layout">
             <LinearLayout
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:id="@+id/home_heart_click"
                 android:orientation="vertical"
-                android:paddingLeft="20dp"
-                android:paddingRight="20dp"
-                android:paddingTop="0dp"
-                android:paddingBottom="0dp"
-                android:layout_marginLeft="10dp"
-                android:layout_marginTop="5dp"
-                android:layout_marginRight="10dp"
-                android:layout_marginBottom="5dp"
-                android:layout_gravity="center"
-                android:background="@drawable/custom_layout">
+                android:id="@+id/home_heart_click">
 
                 <TextView
                     android:layout_width="match_parent"
@@ -86,14 +90,61 @@
                         android:layout_height="wrap_content"
                         android:layout_marginLeft="2dp"
                         android:fontFamily="@font/quicksand"
-                        android:text="bpm"
+                        android:text="bpm /"
                         android:layout_marginBottom="-5dp"
                         android:textColor="@color/color2"
                         android:textSize="12sp" />
 
                 </LinearLayout>
             </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:id="@+id/home_sp02_click">
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="@font/quicksand_medium"
+                    android:text="SpO2"
+                    android:textAlignment="center"
+                    android:textColor="@color/color2"
+                    android:textSize="12sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="5dp"
+                    android:layout_marginTop="-5dp">
+
+
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:id="@+id/home_sp02"
+                        android:layout_marginLeft="5dp"
+                        android:textColor="@color/color2"
+                        android:fontFamily="@font/quicksand_medium"
+                        android:textSize="25sp"/>
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="2dp"
+                        android:fontFamily="@font/quicksand_bold"
+                        android:text="%"
+                        android:layout_marginBottom="-5dp"
+                        android:textColor="@color/color2"
+                        android:textSize="12sp" />
+
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
             <Button
                 android:layout_width="80dp"
                 android:layout_height="30dp"
