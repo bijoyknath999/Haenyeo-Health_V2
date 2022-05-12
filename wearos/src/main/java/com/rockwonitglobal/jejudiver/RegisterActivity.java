@@ -85,7 +85,6 @@ public class RegisterActivity extends AppCompatActivity implements MqttCallback 
         RegBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(RegisterActivity.this, "Clicked", Toast.LENGTH_SHORT).show();
                 try {
 
                     if (!mqttClient.isConnected()) {

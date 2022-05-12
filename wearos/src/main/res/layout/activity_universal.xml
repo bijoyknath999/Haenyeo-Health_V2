@@ -85,7 +85,7 @@
             android:layout_gravity="center"
             android:textColor="@color/white"
             android:background="@drawable/custom_card2"
-            android:text="Heart Rate"
+            android:text="Start"
             android:textAllCaps="false"
             android:textSize="11sp" />
 

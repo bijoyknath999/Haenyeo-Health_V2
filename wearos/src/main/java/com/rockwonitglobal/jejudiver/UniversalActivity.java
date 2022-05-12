@@ -258,8 +258,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
         finaldiverid = Tools.getID("diverid",UniversalActivity.this);
 
-        Toast.makeText(this, ""+finaldiverid, Toast.LENGTH_SHORT).show();
-
         if (finaldiverid>0)
         {
             Tools.saveID("diverid", finaldiverid, UniversalActivity.this);

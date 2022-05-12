@@ -265,11 +265,9 @@ public class HomeActivity extends WearableActivity
         }
     }
 
-    private void PublishDataWithSp02() {
-        System.out.println("This method is run every 1 min");
-
+    private void PublishDataWithSp02(int value) {
         try {
-            messagesp02 = "ID || SP ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ PER || "+sp02value+"  ^^ TS || "+getCurrentTimestamp();
+            messagesp02 = "ID || SP ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ PER || "+value+"  ^^ TS || "+getCurrentTimestamp();
 
             if (!mqttClient.isConnected()) {
                 mqttClient.connect();
@@ -372,11 +370,14 @@ public class HomeActivity extends WearableActivity
 
     private void getSp02Value() {
 
-        if (IsSp02Connected)
-            handler.post(() -> {
-                if (spo2Tracker!=null)
+        handler2.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (spo2Tracker!=null) {
                     spo2Tracker.setEventListener(trackerEventListener);
-            });
+                }
+            }
+        }, 15000);
     }
 
     @Override
@@ -667,7 +668,7 @@ public class HomeActivity extends WearableActivity
 
         IsSp02Connected = true;
 
-        //Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
 
         try {
             spo2Tracker = healthTrackingService.getHealthTracker(HealthTrackerType.SPO2);
@@ -681,13 +682,13 @@ public class HomeActivity extends WearableActivity
     @Override
     public void onConnectionEnded() {
         IsSp02Connected = false;
-        //Toast.makeText(this, "Ended!!", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Ended!!", Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onConnectionFailed(HealthTrackerException e) {
         IsSp02Connected = false;
-        //Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
 
     }
 
@@ -707,18 +708,22 @@ public class HomeActivity extends WearableActivity
                                 spo2Tracker.unsetEventListener();
                             }
                             handler.removeCallbacksAndMessages(null);
+                            //handler2.removeCallbacksAndMessages(null);
                         }
                         else if (status == 0) {
+                            //Toast.makeText(HomeActivity.this, "Status : 0", Toast.LENGTH_SHORT).show();
                         }
                         else if (status == -4){
-                            //Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
                         }
                         else {
-                            //Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
                         }
                         Tools.saveID("sp02_value",dataPoint.getValue(ValueKey.SpO2Set.SPO2),HomeActivity.this);
-                        PublishDataWithSp02();
-                        TextSp02.setText(String.valueOf(dataPoint.getValue(ValueKey.SpO2Set.SPO2)));
+                        if (dataPoint.getValue(ValueKey.SpO2Set.SPO2)>0) {
+                            PublishDataWithSp02(dataPoint.getValue(ValueKey.SpO2Set.SPO2));
+                            TextSp02.setText(String.valueOf(dataPoint.getValue(ValueKey.SpO2Set.SPO2)));
+                        }
                     });
                 }
             } else {
