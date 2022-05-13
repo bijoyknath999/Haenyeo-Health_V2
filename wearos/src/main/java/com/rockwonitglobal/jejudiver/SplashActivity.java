@@ -11,7 +11,7 @@ public class SplashActivity extends AppCompatActivity {
 
     private static final int SPLASH_DURATION = 2000;
     private BoxInsetLayout rootLayout;
-    private int diverid;
+    private String diverid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,7 +27,7 @@ public class SplashActivity extends AppCompatActivity {
         rootLayout.postDelayed(new Runnable() {
             @Override
             public void run() {
-                if (diverid>0)
+                if (!diverid.equals("0"))
                 {
                     Intent intent = new Intent(SplashActivity.this, UniversalActivity.class);
                     startActivity(intent);

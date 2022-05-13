@@ -76,6 +76,7 @@ public class RegisterActivity extends AppCompatActivity implements MqttCallback 
             mqttClient = new MqttClient(serverUrl, clientId, new MemoryPersistence());
             mqttClient.setCallback(this);
             mqttClient.connect(mqttConnectOptions);
+            mqttClient.subscribe("RW/JD/DS",0);
         } catch (MqttException e) {
             e.printStackTrace();
         }
@@ -97,7 +98,8 @@ public class RegisterActivity extends AppCompatActivity implements MqttCallback 
                         System.out.println("Sending done...");
                         mqttClient.disconnect();
                         mqttClient.close();
-                        startActivity(new Intent(RegisterActivity.this,UniversalActivity.class));
+                        //startActivity(new Intent(RegisterActivity.this,UniversalActivity.class)); //remove code
+                        Toast.makeText(RegisterActivity.this, "sending.....", Toast.LENGTH_SHORT).show(); //<== add toast
                     }
                     else
                         System.out.println("Failed To Send.......");
@@ -132,8 +134,24 @@ public class RegisterActivity extends AppCompatActivity implements MqttCallback 
 
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
-        System.out.println("topic :"+topic);
-        System.out.println("message :"+message);
+
+        if ("RW/JD/DS".equals(topic))
+        {
+            String messageStr = new String(message.getPayload(),"UTF-8");
+            String diverID = Tools.getData(messageStr, "HNID");
+            String SSAID = Tools.getData(messageStr, "EQID");
+
+
+            String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+
+            if(SSAID.equals(androidId) && !"".equals(androidId))
+            {
+                if("-1".equals(diverID))
+                {
+                    startActivity(new Intent(RegisterActivity.this,UniversalActivity.class));
+                }
+            }
+        }
     }
 
     @Override

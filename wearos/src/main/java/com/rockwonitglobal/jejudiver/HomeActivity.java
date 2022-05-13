@@ -71,7 +71,7 @@ import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public class HomeActivity extends WearableActivity
-        implements SensorEventListener, DataClient.OnDataChangedListener, LocationListener, MqttCallback, ConnectionListener {
+        implements SensorEventListener, DataClient.OnDataChangedListener, LocationListener, MqttCallback {
 
     TextView TextHearRate, TextSp02;
     ImageView ImgHeart;
@@ -104,7 +104,7 @@ public class HomeActivity extends WearableActivity
     private int finalheartrate;
     private RequestChecker requestChecker;
     private String androidId, diverID = "";
-    private int finaldiverid, sp02value = 0;
+    private String finaldiverid;
 
 
     private final String serverUrl   = "ssl://iot.shovvel.com:47883";
@@ -126,9 +126,6 @@ public class HomeActivity extends WearableActivity
     Runnable runnable;
     int delay = 60000;
 
-    private HealthTracker spo2Tracker = null;
-    private HealthTrackingService healthTrackingService = null;
-    private final Handler handler = new Handler(Looper.myLooper());
 
     private String TAG = "Test";
     private final int REQUEST_ACCOUNT_PERMISSION = 100;
@@ -174,14 +171,6 @@ public class HomeActivity extends WearableActivity
         Stop.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(spo2Tracker != null) {
-                    spo2Tracker.unsetEventListener();
-                }
-                handler.removeCallbacksAndMessages(null);
-                handler2.removeCallbacksAndMessages(null);
-                if(healthTrackingService != null) {
-                    healthTrackingService.disconnectService();
-                }
 
                 if (mqttClient.isConnected()) {
                     try {
@@ -292,13 +281,6 @@ public class HomeActivity extends WearableActivity
     protected void onDestroy() {
         super.onDestroy();
 
-        if(spo2Tracker != null) {
-            spo2Tracker.unsetEventListener();
-        }
-        handler.removeCallbacksAndMessages(null);
-        if(healthTrackingService != null) {
-            healthTrackingService.disconnectService();
-        }
         handler2.removeCallbacksAndMessages(null);
         if (mqttClient.isConnected()) {
             try {
@@ -366,19 +348,6 @@ public class HomeActivity extends WearableActivity
         animator.start();
     }
 
-    private void getSp02Value() {
-
-        handler2.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (spo2Tracker!=null) {
-                    Toast.makeText(HomeActivity.this, "Measuring", Toast.LENGTH_SHORT).show();
-                    spo2Tracker.setEventListener(trackerEventListener);
-                }
-            }
-        }, 3000);
-    }
-
     @Override
     public void onSensorChanged(SensorEvent event) {
 
@@ -390,7 +359,7 @@ public class HomeActivity extends WearableActivity
                 animator.start();
                 TextHearRate.setText(Integer.toString(heart_rate) +"");
                 finalheartrate = heart_rate;
-                Tools.saveID("heart_rate",finalheartrate,HomeActivity.this);
+                Tools.saveField("heart_rate",finalheartrate,HomeActivity.this);
                 sendData(String.valueOf(finalheartrate));
             }
         }
@@ -428,13 +397,14 @@ public class HomeActivity extends WearableActivity
 
         if (requestChecker.CheckingPermissionIsEnabledOrNot()) {
 
-            healthTrackingService = new HealthTrackingService(this, getApplicationContext());
-            healthTrackingService.connectService();
-
             if (options == 1)
                 getHeartRate();
             else if (options == 2)
-                getSp02Value();
+            {
+                getHeartRate();
+                int sp02 = Tools.getField("sp02_value",HomeActivity.this);
+                PublishDataWithSp02(sp02);
+            }
         }
         else
             requestChecker.RequestMultiplePermission();
@@ -643,23 +613,27 @@ public class HomeActivity extends WearableActivity
 
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
-        if (topic4.equals("RW/JD/DS"))
+        if ("RW/JD/DS".equals(topic4))
         {
-            System.out.println("topic :"+topic);
-            System.out.println("message :"+message);
-            String messageStr = String.valueOf(message);
-            String messageStr2 = messageStr.substring(messageStr.indexOf("HNID || ")+8);
-            String firstWord = messageStr2.replaceAll(" ", "*");
-            diverID = firstWord.substring(0, firstWord.indexOf("*^"));
-            int dID = Integer.parseInt(diverID);
-            Tools.saveID("diverid", dID,HomeActivity.this);
-            if (diverID.equals("-1"))
+
+            String messageStr = new String(message.getPayload(),"UTF-8");
+            String diverID = Tools.getData(messageStr, "HNID");
+            String SSAID = Tools.getData(messageStr, "EQID");
+
+
+            String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+
+            if(SSAID.equals(androidId) && !"".equals(androidId))
+            {
+                Tools.saveID("diverid", diverID,HomeActivity.this);
+                if (diverID.equals("-1"))
                 {
                     startActivity(new Intent(HomeActivity.this, UniversalActivity.class));
                     finish();
                 }
-            else if (dID>0)
-                finaldiverid = dID;
+                else if (!diverID.equals("-1"))
+                    finaldiverid = diverID;
+            }
         }
     }
 
@@ -672,92 +646,5 @@ public class HomeActivity extends WearableActivity
             e.printStackTrace();
         }
     }
-
-    @Override
-    public void onConnectionSuccess() {
-
-        IsSp02Connected = true;
-
-        Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
-
-        try {
-            spo2Tracker = healthTrackingService.getHealthTracker(HealthTrackerType.SPO2);
-        } catch (final IllegalArgumentException e) {
-            runOnUiThread(() -> Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show()
-            );
-            finish();
-        }
-    }
-
-    @Override
-    public void onConnectionEnded() {
-        IsSp02Connected = false;
-        Toast.makeText(this, "Ended!!", Toast.LENGTH_SHORT).show();
-    }
-
-    @Override
-    public void onConnectionFailed(HealthTrackerException e) {
-        IsSp02Connected = false;
-        Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
-
-    }
-
-    private final HealthTracker.TrackerEventListener trackerEventListener = new HealthTracker.TrackerEventListener() {
-        @Override
-        public void onDataReceived(@NonNull List<DataPoint> list) {
-            if (list.size() != 0) {
-                Log.i(TAG, "List Size : "+list.size());
-                for(DataPoint dataPoint : list) {
-                    int status = dataPoint.getValue(ValueKey.SpO2Set.STATUS);
-                    Log.i(TAG, "Status : " + status);
-                    runOnUiThread(() -> {
-
-                        if (status == 2) {
-                            Toast.makeText(HomeActivity.this, "Success!!", Toast.LENGTH_SHORT).show();
-                            if(spo2Tracker != null) {
-                                spo2Tracker.unsetEventListener();
-                            }
-                            handler.removeCallbacksAndMessages(null);
-                            //handler2.removeCallbacksAndMessages(null);
-                        }
-                        else if (status == 0) {
-                            //Toast.makeText(HomeActivity.this, "Status : 0", Toast.LENGTH_SHORT).show();
-                        }
-                        else if (status == -4){
-                            Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
-                        }
-                        else {
-                            Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
-                        }
-                        Tools.saveID("sp02_value",dataPoint.getValue(ValueKey.SpO2Set.SPO2),HomeActivity.this);
-                        if (dataPoint.getValue(ValueKey.SpO2Set.SPO2)>0) {
-                            PublishDataWithSp02(dataPoint.getValue(ValueKey.SpO2Set.SPO2));
-                            TextSp02.setText(String.valueOf(dataPoint.getValue(ValueKey.SpO2Set.SPO2)));
-                        }
-                    });
-                }
-            } else {
-                Log.i(TAG, "onDataReceived List is zero");
-            }
-        }
-
-        @Override
-        public void onFlushCompleted() {
-            Log.i(TAG, " onFlushCompleted called");
-        }
-
-        @Override
-        public void onError(HealthTracker.TrackerError trackerError) {
-            Log.i(TAG, " onError called");
-            if (trackerError == HealthTracker.TrackerError.PERMISSION_ERROR) {
-                runOnUiThread(() -> Toast.makeText(getApplicationContext(),
-                        "Permissions Check Failed", Toast.LENGTH_SHORT).show());
-            }
-            if (trackerError == HealthTracker.TrackerError.SDK_POLICY_ERROR) {
-                runOnUiThread(() -> Toast.makeText(getApplicationContext(),
-                        "SDK Policy denied", Toast.LENGTH_SHORT).show());
-            }
-        }
-    };
 
 }

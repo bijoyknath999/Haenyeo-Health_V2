@@ -37,14 +37,14 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-public class UniversalActivity extends AppCompatActivity implements MqttCallback {
+public class UniversalActivity extends AppCompatActivity implements MqttCallback, ConnectionListener {
 
     private TextView SSAIDTEXT,DiverID;
     private BoxInsetLayout LayoutBg;
     private AppCompatButton HeartRateBtn,Sp02Btn;
     private String androidId, diverid = "0";
 
-    private int finaldiverid, SaveID;
+    private String finaldiverid, SaveID;
 
     private final String serverUrl   = "ssl://iot.shovvel.com:47883";
     private String clientId    = "";
@@ -58,6 +58,12 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     private CountDownTimer cdt;
 
     private String TAG = "Test";
+
+    private HealthTracker spo2Tracker = null;
+    private HealthTrackingService healthTrackingService = null;
+    private final Handler handler = new Handler(Looper.myLooper());
+    Handler handler2 = new Handler();
+
 
 
     @Override
@@ -104,8 +110,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         HeartRateBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                int diveid_ = Tools.getID("diverid",UniversalActivity.this);
-                if (diveid_ > 0) {
+                String diveid_ = Tools.getID("diverid",UniversalActivity.this);
+                if (!diveid_.equals("0") && !diveid_.equals("-1")) {
                     if (cdt!=null)
                         cdt.cancel();
                     try {
@@ -117,6 +123,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
                     Intent intent = new Intent(UniversalActivity.this,HomeActivity.class);
                     intent.putExtra("options",1);
                     startActivity(intent);
+                    finish();
                 }
                 else
                     Toast.makeText(UniversalActivity.this, "Please Re-register.", Toast.LENGTH_SHORT).show();
@@ -126,9 +133,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         Sp02Btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(UniversalActivity.this, "Checking", Toast.LENGTH_SHORT).show();
-                int diveid_ = Tools.getID("diverid",UniversalActivity.this);
-                if (diveid_ > 0) {
+                String diveid_ = Tools.getID("diverid",UniversalActivity.this);
+                if (!diveid_.equals("0") && !diveid_.equals("-1")) {
                     if (cdt!=null)
                         cdt.cancel();
                     try {
@@ -137,9 +143,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
                     } catch (MqttException e) {
                         e.printStackTrace();
                     }
-                    Intent intent = new Intent(UniversalActivity.this,HomeActivity.class);
-                    intent.putExtra("options",2);
-                    startActivity(intent);
+                    getSp02Value();
                 }
                 else
                     Toast.makeText(UniversalActivity.this, "Please Re-register.", Toast.LENGTH_SHORT).show();
@@ -149,12 +153,14 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
     private void LoadFunc() {
         SaveID = Tools.getID("diverid",UniversalActivity.this);
-        if (SaveID>0)
+        if (!SaveID.equals("0") && !SaveID.equals("-1"))
         {
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color10));
             DiverID.setText(""+SaveID);
             HeartRateBtn.setVisibility(View.VISIBLE);
             Sp02Btn.setVisibility(View.VISIBLE);
+            healthTrackingService = new HealthTrackingService(this, getApplicationContext());
+            healthTrackingService.connectService();
         }
 
         cdt = new CountDownTimer(3000,1000) {
@@ -194,23 +200,32 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
 
-        System.out.println("topic :"+topic);
-
         if (topic.equals(topic2))
         {
-            System.out.println("topic :"+topic);
-            System.out.println("message :"+message);
-            String messageStr = String.valueOf(message);
-            String messageStr2 = messageStr.substring(messageStr.indexOf("HNID || ")+8);
-            String firstWord = messageStr2.replaceAll(" ", "*");
-            diverid = firstWord.substring(0, firstWord.indexOf("*^"));
-            Tools.saveID("diverid", Integer.parseInt(diverid), UniversalActivity.this);
+            String messageStr = new String(message.getPayload(),"UTF-8");
+            String diverID = Tools.getData(messageStr, "HNID");
+            String SSAID = Tools.getData(messageStr, "EQID");
+
+            String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+
+            if(SSAID.equals(androidId) && !"".equals(androidId))
+            {
+
+                if(!"-1".equals(diverID))
+                {
+                    Tools.saveID("diverid", diverid, UniversalActivity.this);
+                    startActivity(new Intent(UniversalActivity.this, HomeActivity.class));
+                    finish();
+
+                }
+            }
         }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
+
         if (!mqttClient.isConnected()) {
             try {
                 mqttClient.connect();
@@ -226,6 +241,14 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         super.onDestroy();
 
 
+        if(spo2Tracker != null) {
+            spo2Tracker.unsetEventListener();
+        }
+        handler.removeCallbacksAndMessages(null);
+        if(healthTrackingService != null) {
+            healthTrackingService.disconnectService();
+        }
+
         if (cdt!=null)
             cdt.cancel();
 
@@ -240,13 +263,26 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
     }
 
+    private void getSp02Value() {
+
+        handler2.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (spo2Tracker!=null) {
+                    Toast.makeText(UniversalActivity.this, "measuring", Toast.LENGTH_SHORT).show();
+                    spo2Tracker.setEventListener(trackerEventListener);
+                }
+            }
+        }, 3000);
+    }
+
     private void CheckDriverID() {
 
         System.out.println(""+diverid);
 
         finaldiverid = Tools.getID("diverid",UniversalActivity.this);
 
-        if (finaldiverid>0)
+        if (!finaldiverid.equals("0") && !finaldiverid.equals("-1"))
         {
             Tools.saveID("diverid", finaldiverid, UniversalActivity.this);
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color10));
@@ -271,4 +307,91 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             e.printStackTrace();
         }
     }
+
+    @Override
+    public void onConnectionSuccess() {
+
+        //Toast.makeText(this, "Connected!!", Toast.LENGTH_SHORT).show();
+
+        try {
+            spo2Tracker = healthTrackingService.getHealthTracker(HealthTrackerType.SPO2);
+        } catch (final IllegalArgumentException e) {
+            runOnUiThread(() -> Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show()
+            );
+            finish();
+        }
+    }
+
+    @Override
+    public void onConnectionEnded() {
+        //Toast.makeText(this, "Ended!!", Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onConnectionFailed(HealthTrackerException e) {
+        //Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
+    }
+
+    private final HealthTracker.TrackerEventListener trackerEventListener = new HealthTracker.TrackerEventListener() {
+        @Override
+        public void onDataReceived(@NonNull List<DataPoint> list) {
+            if (list.size() != 0) {
+                Log.i(TAG, "List Size : "+list.size());
+                for(DataPoint dataPoint : list) {
+                    int status = dataPoint.getValue(ValueKey.SpO2Set.STATUS);
+                    Log.i(TAG, "Status : " + status);
+                    runOnUiThread(() -> {
+
+                        if (status == 2) {
+                            Toast.makeText(UniversalActivity.this, "success...", Toast.LENGTH_SHORT).show();
+                            if(spo2Tracker != null) {
+                                spo2Tracker.unsetEventListener();
+                            }
+                            handler.removeCallbacksAndMessages(null);
+                        }
+                        else if (status == 0) {
+                            Toast.makeText(UniversalActivity.this, "failed...", Toast.LENGTH_SHORT).show();
+                        }
+                        else if (status == -4){
+                            Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
+                        }
+                        else {
+                            Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
+                        }
+                        Tools.saveField("sp02_value",dataPoint.getValue(ValueKey.SpO2Set.SPO2),UniversalActivity.this);
+                        if (dataPoint.getValue(ValueKey.SpO2Set.SPO2)>0) {
+                            handler2.removeCallbacksAndMessages(null);
+                            if(healthTrackingService != null) {
+                                healthTrackingService.disconnectService();
+                            }
+                            Intent intent = new Intent(UniversalActivity.this,HomeActivity.class);
+                            intent.putExtra("options",2);
+                            startActivity(intent);
+                            finish();
+                        }
+                    });
+                }
+            } else {
+                Log.i(TAG, "onDataReceived List is zero");
+            }
+        }
+
+        @Override
+        public void onFlushCompleted() {
+            Log.i(TAG, " onFlushCompleted called");
+        }
+
+        @Override
+        public void onError(HealthTracker.TrackerError trackerError) {
+            Log.i(TAG, " onError called");
+            if (trackerError == HealthTracker.TrackerError.PERMISSION_ERROR) {
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(),
+                        "Permissions Check Failed", Toast.LENGTH_SHORT).show());
+            }
+            if (trackerError == HealthTracker.TrackerError.SDK_POLICY_ERROR) {
+                runOnUiThread(() -> Toast.makeText(getApplicationContext(),
+                        "SDK Policy denied", Toast.LENGTH_SHORT).show());
+            }
+        }
+    };
 }
