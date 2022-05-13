@@ -216,6 +216,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             String diverID = Tools.getData(messageStr, "HNID");
             String SSAID = Tools.getData(messageStr, "EQID");
 
+            System.out.println("diver id : "+diverID);
             String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
 
             if(SSAID.equals(androidId) && !"".equals(androidId))
