@@ -96,7 +96,6 @@ public class RegisterActivity extends AppCompatActivity implements MqttCallback 
                         System.out.println("Sending message...");
                         mqttClient.publish(topic1, message.getBytes(), 0, false);
                         System.out.println("Sending done...");
-
                         //startActivity(new Intent(RegisterActivity.this,UniversalActivity.class)); //remove code
                         Toast.makeText(RegisterActivity.this, "sending.....", Toast.LENGTH_SHORT).show(); //<== add toast
                     }

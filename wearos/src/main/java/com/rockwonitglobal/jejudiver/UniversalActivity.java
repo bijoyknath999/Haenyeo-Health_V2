@@ -200,6 +200,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     @Override
     public void messageArrived(String topic, MqttMessage message) throws Exception {
 
+        System.out.println(""+topic);
+
         if (topic.equals(topic2))
         {
             String messageStr = new String(message.getPayload(),"UTF-8");
@@ -214,9 +216,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
                 if(!"-1".equals(diverID))
                 {
                     Tools.saveID("diverid", diverid, UniversalActivity.this);
-                    startActivity(new Intent(UniversalActivity.this, HomeActivity.class));
-                    finish();
-
                 }
             }
         }
