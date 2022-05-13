@@ -208,6 +208,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             String diverID = Tools.getData(messageStr, "HNID");
             String SSAID = Tools.getData(messageStr, "EQID");
 
+            System.out.println("diver id : "+diverID);
             String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
 
             if(SSAID.equals(androidId) && !"".equals(androidId))
@@ -216,6 +217,10 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
                 if(!"-1".equals(diverID))
                 {
                     Tools.saveID("diverid", diverid, UniversalActivity.this);
+                    Intent intent = new Intent(UniversalActivity.this,HomeActivity.class);
+                    intent.putExtra("options",1);
+                    startActivity(intent);
+                    finish();
                 }
             }
         }
