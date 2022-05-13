@@ -10,7 +10,7 @@ public class Tools {
 
     public static void saveID(String field, String id, Context context)
     {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("hhmsdata", context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = context.getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putString(field, id);
         editor.commit();
@@ -18,14 +18,14 @@ public class Tools {
 
     public static String getID(String field,Context context)
     {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("hhmsdata", context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = context.getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
         String diverid = sharedPreferences.getString(field,"0");
         return diverid;
     }
 
     public static void saveField(String field, int id, Context context)
     {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("hhmsdata", context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = context.getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putInt(field, id);
         editor.commit();
@@ -33,7 +33,7 @@ public class Tools {
 
     public static int getField(String field,Context context)
     {
-        SharedPreferences sharedPreferences = context.getSharedPreferences("hhmsdata", context.MODE_PRIVATE);
+        SharedPreferences sharedPreferences = context.getSharedPreferences("hhmsdata", Context.MODE_PRIVATE);
         int id = sharedPreferences.getInt(field,0);
         return id;
     }
