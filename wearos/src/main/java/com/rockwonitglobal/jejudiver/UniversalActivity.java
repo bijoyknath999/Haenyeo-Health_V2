@@ -213,10 +213,10 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
             if(SSAID.equals(androidId) && !"".equals(androidId))
             {
+                Tools.saveID("diverid", diverID, UniversalActivity.this);
 
                 if(!"-1".equals(diverID))
                 {
-                    Tools.saveID("diverid", diverid, UniversalActivity.this);
                     Intent intent = new Intent(UniversalActivity.this,HomeActivity.class);
                     intent.putExtra("options",1);
                     startActivity(intent);

@@ -392,8 +392,8 @@ public class HomeActivity extends WearableActivity
 
     private void LoadFunc() {
 
-        TextHearRate.setText(""+Tools.getID("heart_rate",HomeActivity.this));
-        TextSp02.setText(""+Tools.getID("sp02_value",HomeActivity.this));
+        TextHearRate.setText(""+Tools.getField("heart_rate",HomeActivity.this));
+        TextSp02.setText(""+Tools.getField("sp02_value",HomeActivity.this));
 
         if (requestChecker.CheckingPermissionIsEnabledOrNot()) {
 
@@ -615,11 +615,9 @@ public class HomeActivity extends WearableActivity
     public void messageArrived(String topic, MqttMessage message) throws Exception {
         if ("RW/JD/DS".equals(topic4))
         {
-
             String messageStr = new String(message.getPayload(),"UTF-8");
             String diverID = Tools.getData(messageStr, "HNID");
             String SSAID = Tools.getData(messageStr, "EQID");
-
 
             String androidId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
 

@@ -5,6 +5,7 @@ import androidx.wear.widget.BoxInsetLayout;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Toast;
 
 
 public class SplashActivity extends AppCompatActivity {
@@ -21,6 +22,8 @@ public class SplashActivity extends AppCompatActivity {
         rootLayout = findViewById(R.id.splashScreen);
 
         diverid = Tools.getID("diverid",SplashActivity.this);
+
+        System.out.println(""+diverid);
     }
 
     private void initFunctionality() {
