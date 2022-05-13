@@ -42,7 +42,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     private TextView SSAIDTEXT,DiverID;
     private BoxInsetLayout LayoutBg;
     private AppCompatButton HeartRateBtn,Sp02Btn;
-    private String androidId, diverid = "0";
+    private String androidId;
 
     private String finaldiverid, SaveID;
 
@@ -153,7 +153,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
     private void LoadFunc() {
         SaveID = Tools.getID("diverid",UniversalActivity.this);
-        if (!SaveID.equals("0") && !SaveID.equals("-1"))
+        if (!"0".equals(SaveID) && !"-1".equals(SaveID))
         {
             LayoutBg.setBackgroundColor(getResources().getColor(R.color.color10));
             DiverID.setText(""+SaveID);
@@ -162,7 +162,14 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             healthTrackingService = new HealthTrackingService(this, getApplicationContext());
             healthTrackingService.connectService();
         }
-
+        else
+        {
+            LayoutBg.setBackgroundColor(getResources().getColor(R.color.color9));
+            DiverID.setText("Not Ready");
+            HeartRateBtn.setVisibility(View.GONE);
+            Sp02Btn.setVisibility(View.GONE);
+        }
+        /*
         cdt = new CountDownTimer(3000,1000) {
             public void onTick(long millisUntilFinished) {
                 System.out.println(" "+millisUntilFinished);
@@ -174,6 +181,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         };
 
         cdt.start();
+        */
     }
 
 
@@ -215,7 +223,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
                 if(!"-1".equals(diverID))
                 {
-                    Tools.saveID("diverid", diverid, UniversalActivity.this);
+                    Tools.saveID("diverid", diverID, UniversalActivity.this);
                     Intent intent = new Intent(UniversalActivity.this,HomeActivity.class);
                     intent.putExtra("options",1);
                     startActivity(intent);
@@ -237,6 +245,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             }
         }
         LoadFunc();
+
     }
 
     @Override
@@ -280,8 +289,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     }
 
     private void CheckDriverID() {
-
-        System.out.println(""+diverid);
 
         finaldiverid = Tools.getID("diverid",UniversalActivity.this);
 
