@@ -63,6 +63,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     private HealthTrackingService healthTrackingService = null;
     private final Handler handler = new Handler(Looper.myLooper());
     Handler handler2 = new Handler();
+    private int prevStatus = -100;
+
 
 
 
@@ -124,26 +126,6 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
                     intent.putExtra("options",1);
                     startActivity(intent);
                     finish();
-                }
-                else
-                    Toast.makeText(UniversalActivity.this, "Please Re-register.", Toast.LENGTH_SHORT).show();
-            }
-        });
-
-        Sp02Btn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String diveid_ = Tools.getID("diverid",UniversalActivity.this);
-                if (!diveid_.equals("0") && !diveid_.equals("-1")) {
-                    if (cdt!=null)
-                        cdt.cancel();
-                    try {
-                        mqttClient.disconnect();
-                        mqttClient.close();
-                    } catch (MqttException e) {
-                        e.printStackTrace();
-                    }
-                    getSp02Value();
                 }
                 else
                     Toast.makeText(UniversalActivity.this, "Please Re-register.", Toast.LENGTH_SHORT).show();
@@ -268,16 +250,11 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     }
 
     private void getSp02Value() {
-
-        handler2.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                if (spo2Tracker!=null) {
-                    Toast.makeText(UniversalActivity.this, "measuring", Toast.LENGTH_SHORT).show();
-                    spo2Tracker.setEventListener(trackerEventListener);
-                }
-            }
-        }, 3000);
+        prevStatus = -100;
+        Toast.makeText(UniversalActivity.this, "SpO2 measuring", Toast.LENGTH_SHORT).show();
+        handler.post(() -> {
+            spo2Tracker.setEventListener(trackerEventListener);
+        });
     }
 
     private void CheckDriverID() {
@@ -324,6 +301,34 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
             );
             finish();
         }
+
+        try {
+            spo2Tracker = healthTrackingService.getHealthTracker(HealthTrackerType.SPO2);
+        } catch (final IllegalArgumentException e) {
+            runOnUiThread(() -> Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_LONG).show()
+            );
+            finish();
+        }
+
+        Sp02Btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String diveid_ = Tools.getID("diverid",UniversalActivity.this);
+                if (!diveid_.equals("0") && !diveid_.equals("-1")) {
+                    if (cdt!=null)
+                        cdt.cancel();
+                    try {
+                        mqttClient.disconnect();
+                        mqttClient.close();
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
+                    getSp02Value();
+                }
+                else
+                    Toast.makeText(UniversalActivity.this, "Please Re-register.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     @Override
@@ -333,7 +338,12 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
     @Override
     public void onConnectionFailed(HealthTrackerException e) {
-        //Toast.makeText(this, "Failed : "+e.getMessage(), Toast.LENGTH_SHORT).show();
+        if(e.hasResolution()) {
+            e.resolve(UniversalActivity.this);
+        }
+        runOnUiThread(() -> Toast.makeText(getApplicationContext(), "Unable to connect to HSP", Toast.LENGTH_LONG).show()
+        );
+        finish();
     }
 
     private final HealthTracker.TrackerEventListener trackerEventListener = new HealthTracker.TrackerEventListener() {
@@ -343,37 +353,37 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
                 Log.i(TAG, "List Size : "+list.size());
                 for(DataPoint dataPoint : list) {
                     int status = dataPoint.getValue(ValueKey.SpO2Set.STATUS);
-                    Log.i(TAG, "Status : " + status);
-                    runOnUiThread(() -> {
-
-                        if (status == 2) {
-                            Toast.makeText(UniversalActivity.this, "success...", Toast.LENGTH_SHORT).show();
-                            if(spo2Tracker != null) {
-                                spo2Tracker.unsetEventListener();
+                    if (prevStatus != status) {
+                        prevStatus = status;
+                        runOnUiThread(() -> {
+                            if (status == 2) {
+                                Toast.makeText(UniversalActivity.this, "success...", Toast.LENGTH_SHORT).show();
+                                if(spo2Tracker != null) {
+                                    spo2Tracker.unsetEventListener();
+                                }
+                                handler.removeCallbacksAndMessages(null);
                             }
-                            handler.removeCallbacksAndMessages(null);
-                        }
-                        else if (status == 0) {
-                            Toast.makeText(UniversalActivity.this, "failed...", Toast.LENGTH_SHORT).show();
-                        }
-                        else if (status == -4){
-                            Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
-                        }
-                        else {
-                            Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
-                        }
-                        Tools.saveField("sp02_value",dataPoint.getValue(ValueKey.SpO2Set.SPO2),UniversalActivity.this);
-                        if (dataPoint.getValue(ValueKey.SpO2Set.SPO2)>0) {
-                            handler2.removeCallbacksAndMessages(null);
-                            if(healthTrackingService != null) {
-                                healthTrackingService.disconnectService();
+                            else if (status == 0) {
                             }
-                            Intent intent = new Intent(UniversalActivity.this,HomeActivity.class);
-                            intent.putExtra("options",2);
-                            startActivity(intent);
-                            finish();
-                        }
-                    });
+                            else if (status == -4){
+                                Toast.makeText(getApplicationContext(), "Moving : " + status, Toast.LENGTH_SHORT).show();
+                            }
+                            else {
+                                Toast.makeText(getApplicationContext(), "Low Signal : " + status, Toast.LENGTH_SHORT).show();
+                            }
+                            Tools.saveField("sp02_value",dataPoint.getValue(ValueKey.SpO2Set.SPO2),UniversalActivity.this);
+                            if (dataPoint.getValue(ValueKey.SpO2Set.SPO2)>0) {
+                                handler2.removeCallbacksAndMessages(null);
+                                if(healthTrackingService != null) {
+                                    healthTrackingService.disconnectService();
+                                }
+                                Intent intent = new Intent(UniversalActivity.this,HomeActivity.class);
+                                intent.putExtra("options",2);
+                                startActivity(intent);
+                                finish();
+                            }
+                        });
+                    }
                 }
             } else {
                 Log.i(TAG, "onDataReceived List is zero");

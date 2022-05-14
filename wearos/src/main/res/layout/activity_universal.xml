@@ -25,6 +25,7 @@
             android:visibility="gone"
             android:text="Sp02"
             android:layout_gravity="center"
+            android:layout_marginTop="5dp"
             android:layout_marginBottom="5dp"
             android:textSize="11sp"
             android:textAllCaps="false"
