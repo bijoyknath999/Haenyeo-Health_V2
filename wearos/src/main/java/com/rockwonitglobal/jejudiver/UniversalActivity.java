@@ -14,6 +14,7 @@ import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -65,6 +66,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
     Handler handler2 = new Handler();
     private int prevStatus = -100;
 
+    private ProgressBar progressBar;
+
 
 
 
@@ -77,6 +80,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
         DiverID = findViewById(R.id.universal_diverid_text);
         HeartRateBtn = findViewById(R.id.universal_heart_rate_btn);
         Sp02Btn = findViewById(R.id.universal_sp02_btn);
+        progressBar = findViewById(R.id.progress_bar);
 
 
         LayoutBg = findViewById(R.id.universal_layout_bg);
@@ -251,7 +255,8 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
 
     private void getSp02Value() {
         prevStatus = -100;
-        Toast.makeText(UniversalActivity.this, "SpO2 measuring", Toast.LENGTH_SHORT).show();
+        progressBar.setVisibility(View.VISIBLE);
+        //Toast.makeText(UniversalActivity.this, "SpO2 measuring", Toast.LENGTH_SHORT).show();
         handler.post(() -> {
             spo2Tracker.setEventListener(trackerEventListener);
         });
@@ -357,6 +362,7 @@ public class UniversalActivity extends AppCompatActivity implements MqttCallback
                         prevStatus = status;
                         runOnUiThread(() -> {
                             if (status == 2) {
+                                progressBar.setVisibility(View.GONE);
                                 Toast.makeText(UniversalActivity.this, "success...", Toast.LENGTH_SHORT).show();
                                 if(spo2Tracker != null) {
                                     spo2Tracker.unsetEventListener();
