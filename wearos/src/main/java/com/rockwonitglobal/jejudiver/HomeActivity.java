@@ -5,6 +5,7 @@ import android.animation.ObjectAnimator;
 import android.animation.PropertyValuesHolder;
 import android.animation.ValueAnimator;
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -17,6 +18,7 @@ import android.hardware.SensorManager;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
@@ -252,6 +254,44 @@ public class HomeActivity extends WearableActivity
         }
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        System.out.println("Stop Called");
+        Intent startIntent = new Intent(HomeActivity.this, BgService.class);
+        startIntent.setAction("start");
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            if (!foregroundServiceRunning())
+                startForegroundService(startIntent);
+        }
+        else
+        {
+            if (!foregroundServiceRunning())
+                startService(startIntent);
+        }
+        handler2.removeCallbacksAndMessages(null);
+        handler2.removeCallbacks(null);
+        if (mqttClient.isConnected()) {
+            try {
+                mqttClient.disconnect();
+                mqttClient.close();
+            } catch (MqttException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public boolean foregroundServiceRunning(){
+        ActivityManager activityManager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for(ActivityManager.RunningServiceInfo service: activityManager.getRunningServices(Integer.MAX_VALUE)) {
+            if(BgService.class.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void PublishDataWithSp02(int value) {
         try {
             messagesp02 = "ID || SP ^^ EQID || "+androidId+" ^^ HNID || "+finaldiverid+" ^^ PER || "+value+"  ^^ TS || "+getCurrentTimestamp();
@@ -280,6 +320,19 @@ public class HomeActivity extends WearableActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
+
+        Intent startIntent = new Intent(HomeActivity.this, BgService.class);
+        startIntent.setAction("stop");
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            if (foregroundServiceRunning())
+                startForegroundService(startIntent);
+        }
+        else
+        {
+            if (foregroundServiceRunning())
+                startService(startIntent);
+        }
 
         handler2.removeCallbacksAndMessages(null);
         if (mqttClient.isConnected()) {
@@ -377,6 +430,20 @@ public class HomeActivity extends WearableActivity
     //on resuming activity, reconnect play services
     public void onResume(){
         super.onResume();
+
+
+        Intent startIntent = new Intent(HomeActivity.this, BgService.class);
+        startIntent.setAction("stop");
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+        {
+            if (foregroundServiceRunning())
+                startForegroundService(startIntent);
+        }
+        else
+        {
+            if (foregroundServiceRunning())
+                startService(startIntent);
+        }
 
         if (!mqttClient.isConnected()) {
             try {
@@ -644,5 +711,7 @@ public class HomeActivity extends WearableActivity
             e.printStackTrace();
         }
     }
+
+
 
 }
